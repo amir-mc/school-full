@@ -1,62 +1,63 @@
-import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import { cookies } from 'next/headers'
+import jwt from 'jsonwebtoken'
+import { PrismaClient } from '@/generated/prisma'
 
-export const {
-  handlers: { GET, POST },
-  auth,
-  signIn,
-  signOut,
-} = NextAuth({
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        nationalId: { label: "کدملی", type: "text" },
-        password: { label: "رمزعبور", type: "password" },
-      },
-      async authorize(credentials) {
-        try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-            method: "POST",
-            body: JSON.stringify(credentials),
-            headers: { "Content-Type": "application/json" },
-          });
 
-          const user = await res.json();
-          
-          if (res.ok && user) {
-            return {
-              id: user.id,
-              nationalId: user.nationalId,
-              name: user.fullName,
-              role: user.role,
-            };
-          }
-          return null;
-        } catch (error) {
-          throw new Error("خطا در ارتباط با سرور");
-        }
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
+const prisma = new PrismaClient()
+const JWT_SECRET = process.env.JWT_SECRET || 'your-very-strong-secret'
+
+export async function login(nationalId: string, password: string) {
+  const user = await prisma.user.findUnique({
+    where: { nationalId }
+  })
+
+  if (!user || user.password !== password) {
+    throw new Error('اطلاعات ورود نامعتبر است')
+  }
+
+  const token = jwt.sign(
+    { id: user.id, role: user.role }, 
+    JWT_SECRET, 
+    { expiresIn: '7d' }
+  )
+
+  // استفاده صحیح با await
+  const cookieStore = await cookies()
+  cookieStore.set('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+  })
+
+  return { id: user.id, role: user.role }
+}
+
+export async function getCurrentUser() {
+  // استفاده صحیح با await
+  const cookieStore = await cookies()
+  const token = cookieStore.get('token')?.value
+
+  if (!token) return null
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string }
+    return await prisma.user.findUnique({ 
+      where: { id: parseInt(decoded.id) },
+      select: {
+        id: true,
+        nationalId: true,
+        fullName: true,
+        role: true
       }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-});
+    })
+  } catch {
+    return null
+  }
+}
+
+export async function logout() {
+  // استفاده صحیح با await
+  const cookieStore = await cookies()
+  cookieStore.delete('token')
+}

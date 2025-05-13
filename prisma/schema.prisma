@@ -27,6 +27,7 @@ model User {
   messagesReceived Message[] @relation("ReceivedMessages")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+   notifications Notification[] 
 }
 
 enum Role {
@@ -62,11 +63,13 @@ model Teacher {
 }
 
 model Parent {
-  id        Int       @id @default(autoincrement())
-  userId    Int       @unique
-  user      User      @relation(fields: [userId], references: [id])
-  students  Student[]
-  createdAt DateTime  @default(now())
+  id            Int            @id @default(autoincrement())
+  userId        Int            @unique
+  user          User           @relation(fields: [userId], references: [id])
+  students      Student[]
+  notifications Notification[] @relation("ParentNotifications")
+  messages      Message[]      @relation("ParentMessages")
+  createdAt     DateTime       @default(now())
 }
 
 model Class {
@@ -146,7 +149,6 @@ enum GradeType {
   PROJECT
   ACTIVITY
 }
-
 model Message {
   id          Int      @id @default(autoincrement())
   content     String
@@ -154,6 +156,29 @@ model Message {
   sender      User     @relation("SentMessages", fields: [senderId], references: [id])
   receiverId  Int
   receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  parent      Parent?  @relation("ParentMessages", fields: [parentId], references: [id])
+  parentId    Int?
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id          Int      @id @default(autoincrement())
+  title       String
+  message     String
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  parent      Parent?  @relation("ParentNotifications", fields: [parentId], references: [id])
+  parentId    Int?
+  isRead      Boolean  @default(false)
+  type        NotificationType
+  createdAt   DateTime @default(now())
+}
+
+enum NotificationType {
+  SYSTEM
+  GRADE
+  ATTENDANCE
+  MESSAGE
+  PAYMENT
 }

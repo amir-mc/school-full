@@ -127,37 +127,45 @@ exports.Prisma.UserScalarFieldEnum = {
   fullName: 'fullName',
   phone: 'phone',
   role: 'role',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.StudentScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
+  studentCode: 'studentCode',
   parentId: 'parentId',
-  classId: 'classId'
+  classId: 'classId',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.TeacherScalarFieldEnum = {
   id: 'id',
-  userId: 'userId'
+  userId: 'userId',
+  teacherCode: 'teacherCode',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.ParentScalarFieldEnum = {
   id: 'id',
-  userId: 'userId'
+  userId: 'userId',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.ClassScalarFieldEnum = {
   id: 'id',
   name: 'name',
-  grade: 'grade'
+  grade: 'grade',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.CourseScalarFieldEnum = {
   id: 'id',
   name: 'name',
   classId: 'classId',
-  teacherId: 'teacherId'
+  teacherId: 'teacherId',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.ScheduleScalarFieldEnum = {
@@ -165,14 +173,16 @@ exports.Prisma.ScheduleScalarFieldEnum = {
   day: 'day',
   startTime: 'startTime',
   endTime: 'endTime',
-  courseId: 'courseId'
+  courseId: 'courseId',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.AttendanceScalarFieldEnum = {
   id: 'id',
   date: 'date',
   status: 'status',
-  studentId: 'studentId'
+  studentId: 'studentId',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.GradeScalarFieldEnum = {
@@ -181,7 +191,30 @@ exports.Prisma.GradeScalarFieldEnum = {
   type: 'type',
   courseId: 'courseId',
   studentId: 'studentId',
-  date: 'date'
+  teacherId: 'teacherId',
+  date: 'date',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MessageScalarFieldEnum = {
+  id: 'id',
+  content: 'content',
+  senderId: 'senderId',
+  receiverId: 'receiverId',
+  parentId: 'parentId',
+  isRead: 'isRead',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.NotificationScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  message: 'message',
+  userId: 'userId',
+  parentId: 'parentId',
+  isRead: 'isRead',
+  type: 'type',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -200,9 +233,43 @@ exports.Prisma.NullsOrder = {
 };
 exports.Role = exports.$Enums.Role = {
   SUPER_ADMIN: 'SUPER_ADMIN',
+  ADMIN: 'ADMIN',
   TEACHER: 'TEACHER',
   PARENT: 'PARENT',
   STUDENT: 'STUDENT'
+};
+
+exports.WeekDay = exports.$Enums.WeekDay = {
+  شنبه: 'شنبه',
+  یکشنبه: 'یکشنبه',
+  دوشنبه: 'دوشنبه',
+  سه_شنبه: 'سه_شنبه',
+  چهارشنبه: 'چهارشنبه',
+  پنجشنبه: 'پنجشنبه',
+  جمعه: 'جمعه'
+};
+
+exports.AttendanceStatus = exports.$Enums.AttendanceStatus = {
+  PRESENT: 'PRESENT',
+  ABSENT: 'ABSENT',
+  EXCUSED: 'EXCUSED',
+  LATE: 'LATE'
+};
+
+exports.GradeType = exports.$Enums.GradeType = {
+  EXAM: 'EXAM',
+  QUIZ: 'QUIZ',
+  ASSIGNMENT: 'ASSIGNMENT',
+  PROJECT: 'PROJECT',
+  ACTIVITY: 'ACTIVITY'
+};
+
+exports.NotificationType = exports.$Enums.NotificationType = {
+  SYSTEM: 'SYSTEM',
+  GRADE: 'GRADE',
+  ATTENDANCE: 'ATTENDANCE',
+  MESSAGE: 'MESSAGE',
+  PAYMENT: 'PAYMENT'
 };
 
 exports.Prisma.ModelName = {
@@ -214,7 +281,9 @@ exports.Prisma.ModelName = {
   Course: 'Course',
   Schedule: 'Schedule',
   Attendance: 'Attendance',
-  Grade: 'Grade'
+  Grade: 'Grade',
+  Message: 'Message',
+  Notification: 'Notification'
 };
 
 /**

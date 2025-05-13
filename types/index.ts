@@ -14,13 +14,18 @@ export interface User {
 
 // نوع دانش‌آموز
 export interface Student {
-  id: string;
-  user: User;
-  parentId?: string;
-  classId: string;
-  className: string;
-  grades?: Grade[];
-  attendances?: Attendance[];
+  id: number;
+  userId: number;
+  user: {
+    id: number;
+    fullName: string;
+  };
+  class: {
+    id: number;
+    name: string;
+    grade: string;
+  };
+  parentId?: number;
 }
 
 // نوع نمره

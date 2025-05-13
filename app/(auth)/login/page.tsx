@@ -1,63 +1,58 @@
-// src/app/(auth)/login/page.tsx
-import { signIn } from "@/lib/auth";
-import { redirect } from "next/navigation";
+'use client'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function LoginPage() {
+  const [nationalId, setNationalId] = useState('')
+  const [password, setPassword] = useState('')
+  const router = useRouter()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nationalId, password }),
+      })
+      if (res.ok) router.push('/dashboard')
+    } catch (error) {
+      console.error('Login failed:', error)
+    }
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          ورود به سیستم مدیریت مدرسه
-        </h1>
+   
+      <form onSubmit={handleSubmit} className="bg-gray-700 p-8 rounded shadow-md w-96">
+        <h1 className="text-2xl font-bold mb-6 text-center">ورود به سیستم</h1>
         
-        <form
-          action={async (formData) => {
-            "use server";
-            await signIn("credentials", {
-              nationalId: formData.get("nationalId"),
-              password: formData.get("password"),
-              redirect: true,
-              redirectTo: "/dashboard",
-            });
-          }}
-          className="space-y-4"
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">کدملی</label>
+          <input
+            name="nationalId"
+            type="text"
+            required
+            className="w-full px-3 py-2 border rounded"
+          />
+        </div>
+        
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-1">رمزعبور</label>
+          <input
+            name="password"
+            type="password"
+            required
+            className="w-full px-3 py-2 border rounded"
+          />
+        </div>
+        
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
         >
-          <div>
-            <label htmlFor="nationalId" className="block text-sm font-medium text-gray-700">
-              کدملی
-            </label>
-            <input
-              id="nationalId"
-              name="nationalId"
-              type="text"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
+          ورود
+        </button>
+      </form>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              رمزعبور
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              ورود به سیستم
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+  )
 }
