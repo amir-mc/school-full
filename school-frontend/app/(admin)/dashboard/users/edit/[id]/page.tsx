@@ -8,11 +8,19 @@ type User = {
   name: string;
   username: string;
   role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
+  classId?: string;
+};
+
+type Class = {
+  id: string;
+  name: string;
 };
 
 export default function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [user, setUser] = useState<User | null>(null);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -37,12 +45,35 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       setLoading(false);
     };
 
+    const fetchClasses = async () => {
+      const res = await fetch(`http://localhost:3000/admin/classes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setClasses(data);
+      }
+    };
+
     fetchUser();
+    fetchClasses();
   }, [id, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    const payload: any = {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+    };
+
+    if (password.trim()) payload.password = password;
+    if (user.role === "STUDENT" && user.classId) payload.classId = user.classId;
 
     const res = await fetch(`http://localhost:3000/admin/users/${id}`, {
       method: "PATCH",
@@ -50,12 +81,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        id: user.id, // کد ملی جدید
-        name: user.name,
-        username: user.username,
-        role: user.role,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (res.ok) {
@@ -94,16 +120,28 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
           placeholder="نام کاربری"
           className="w-full border rounded p-2"
         />
-        <select
-          value={user.role}
-          onChange={(e) => setUser({ ...user, role: e.target.value as User["role"] })}
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="رمز عبور جدید (اختیاری)"
           className="w-full border rounded p-2"
-        >
-          <option value="ADMIN">مدیر</option>
-          <option value="TEACHER">معلم</option>
-          <option value="STUDENT">دانش‌آموز</option>
-          <option value="PARENT">والد</option>
-        </select>
+        />
+
+        {user.role === "STUDENT" && (
+          <select
+            value={user.classId || ""}
+            onChange={(e) => setUser({ ...user, classId: e.target.value })}
+            className="w-full border rounded p-2"
+          >
+            <option value="">انتخاب کلاس</option>
+            {classes.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         <button
           type="submit"

@@ -15,6 +15,7 @@ export declare class ClassService {
                 username: string;
                 password: string;
                 role: import("generated/prisma").$Enums.Role;
+                isConfirmed: boolean;
                 createdAt: Date;
             };
         } & {
@@ -29,11 +30,27 @@ export declare class ClassService {
     createClass(data: {
         name: string;
         grade: number;
-    }): import("generated/prisma").Prisma.Prisma__ClassClient<{
+        teacherIds?: string[];
+    }): Promise<{
+        teachers: ({
+            user: {
+                id: string;
+                name: string;
+                username: string;
+                password: string;
+                role: import("generated/prisma").$Enums.Role;
+                isConfirmed: boolean;
+                createdAt: Date;
+            };
+        } & {
+            id: string;
+            userId: string;
+        })[];
+    } & {
         grade: number;
         id: string;
         name: string;
-    }, never, import("generated/prisma/runtime/library").DefaultArgs, import("generated/prisma").Prisma.PrismaClientOptions>;
+    }>;
     getAllClasses(): Promise<({
         students: ({
             user: {
@@ -42,6 +59,7 @@ export declare class ClassService {
                 username: string;
                 password: string;
                 role: import("generated/prisma").$Enums.Role;
+                isConfirmed: boolean;
                 createdAt: Date;
             };
         } & {
@@ -57,6 +75,7 @@ export declare class ClassService {
                 username: string;
                 password: string;
                 role: import("generated/prisma").$Enums.Role;
+                isConfirmed: boolean;
                 createdAt: Date;
             };
         } & {
@@ -83,6 +102,7 @@ export declare class ClassService {
             username: string;
             password: string;
             role: import("generated/prisma").$Enums.Role;
+            isConfirmed: boolean;
             createdAt: Date;
         };
         class: {
@@ -104,6 +124,7 @@ export declare class ClassService {
                 username: string;
                 password: string;
                 role: import("generated/prisma").$Enums.Role;
+                isConfirmed: boolean;
                 createdAt: Date;
             };
         } & {
@@ -119,6 +140,7 @@ export declare class ClassService {
                 username: string;
                 password: string;
                 role: import("generated/prisma").$Enums.Role;
+                isConfirmed: boolean;
                 createdAt: Date;
             };
         } & {

@@ -1,10 +1,12 @@
 import { UsersService } from 'src/users/users.service';
 import { AdminService } from './admin.service';
+import { Role } from 'generated/prisma';
 export declare class AdminController {
     private readonly usersService;
     private readonly adminService;
     constructor(usersService: UsersService, adminService: AdminService);
     createUser(dto: {
+        nationalId: string;
         name: string;
         username: string;
         password: string;
@@ -16,6 +18,7 @@ export declare class AdminController {
         username: string;
         password: string;
         role: import("generated/prisma").$Enums.Role;
+        isConfirmed: boolean;
         createdAt: Date;
     }>;
     deleteUser(id: string): Promise<{
@@ -24,6 +27,7 @@ export declare class AdminController {
         username: string;
         password: string;
         role: import("generated/prisma").$Enums.Role;
+        isConfirmed: boolean;
         createdAt: Date;
     }>;
     getUserById(id: string): Promise<{
@@ -32,6 +36,7 @@ export declare class AdminController {
         username: string;
         password: string;
         role: import("generated/prisma").$Enums.Role;
+        isConfirmed: boolean;
         createdAt: Date;
     }>;
     updateUser(id: string, dto: {
@@ -45,14 +50,15 @@ export declare class AdminController {
         username: string;
         password: string;
         role: import("generated/prisma").$Enums.Role;
+        isConfirmed: boolean;
         createdAt: Date;
     }>;
     findAll(query: string, role: string, classId: string): Promise<({
         student: {
             id: string;
+            userId: string;
             classId: string;
             parentId: string | null;
-            userId: string;
         } | null;
     } & {
         id: string;
@@ -60,6 +66,7 @@ export declare class AdminController {
         username: string;
         password: string;
         role: import("generated/prisma").$Enums.Role;
+        isConfirmed: boolean;
         createdAt: Date;
     })[]>;
     findAllClasses(): import("generated/prisma").Prisma.PrismaPromise<{
@@ -80,5 +87,43 @@ export declare class AdminController {
     }>;
     countClasses(): Promise<{
         count: number;
+    }>;
+    getPendingUsers(role: Role): Promise<{
+        id: string;
+        name: string;
+        username: string;
+        password: string;
+        role: import("generated/prisma").$Enums.Role;
+        isConfirmed: boolean;
+        createdAt: Date;
+    }[]>;
+    confirmUser(userId: string, body: {
+        classId?: string;
+        parentId?: string;
+    }): Promise<{
+        id: string;
+        userId: string;
+    } | {
+        message: string;
+    }>;
+    confirmTeacher(body: {
+        userId: string;
+    }): Promise<{
+        id: string;
+        userId: string;
+    }>;
+    confirmStudent(body: {
+        userId: string;
+        classId: string;
+    }): Promise<{
+        id: string;
+        userId: string;
+        classId: string;
+        parentId: string | null;
+    }>;
+    confirmParent(body: {
+        userId: string;
+    }): Promise<{
+        message: string;
     }>;
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import api from "@/lib/api";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -17,26 +18,22 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       try { 
         const token = localStorage.getItem("token");
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         const [usersRes, studentsRes, teachersRes, classesRes] = await Promise.all([
-          fetch("http://localhost:3000/admin/users/count/all", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("http://localhost:3000/admin/users/count/students", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("http://localhost:3000/admin/users/count/teachers", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("http://localhost:3000/admin/classes/count", { headers: { Authorization: `Bearer ${token}` } }),
+           api.get('/admin/users/count/all'),
+        api.get('/admin/users/count/students'),
+        api.get('/admin/users/count/teachers'),
+        api.get('/admin/classes/count'),
         ]);
 
-        const [users, students, teachers, classes] = await Promise.all([
-          usersRes.json(),
-          studentsRes.json(),
-          teachersRes.json(),
-          classesRes.json(), 
-        ]);
+ 
 
-        setStats({
-          totalUsers: users.count,
-          totalStudents: students.count,
-          totalTeachers: teachers.count,
-          totalClasses: classes.count,
-        });
+       setStats({
+        totalUsers: usersRes.data.count,
+        totalStudents: studentsRes.data.count,
+        totalTeachers: teachersRes.data.count,
+        totalClasses: classesRes.data.count,
+      });
       } catch (error) {
         console.error("خطا در دریافت آمار:", error);
       }

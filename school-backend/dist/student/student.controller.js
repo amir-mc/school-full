@@ -35,6 +35,9 @@ let StudentController = class StudentController {
     findAll() {
         return this.studentService.getAllStudents();
     }
+    async assignParentToStudent(body) {
+        return this.studentService.assignParentToStudent(body.studentId, body.parentId);
+    }
 };
 exports.StudentController = StudentController;
 __decorate([
@@ -65,6 +68,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], StudentController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Post)('assign-parent'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], StudentController.prototype, "assignParentToStudent", null);
 exports.StudentController = StudentController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('ADMIN'),

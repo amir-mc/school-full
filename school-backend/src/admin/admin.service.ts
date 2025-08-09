@@ -96,19 +96,22 @@ getAllClasses() {
   async createUser(dto: {
   name: string;
   username: string;
+  nationalId: string;
   password: string;
   role: string;
   classId?: string;
 }) {
-  const { name, username, password, role, classId } = dto;
+  const { name, username, password, role, classId, nationalId } = dto;
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   return this.prisma.user.create({
     data: {
+      id: nationalId , // 👈 تبدیل به رشته
       name,
       username,
-      password,
+      password: hashedPassword,
       role: role as Role,
-      student: role === "STUDENT" && classId
+      student: role === 'STUDENT' && classId
         ? {
             create: {
               classId,
@@ -118,6 +121,7 @@ getAllClasses() {
     },
   });
 }
+
 
 async countUsersByRole(role: string): Promise<{ count: number }> {
   if (role === 'ALL') {
@@ -143,6 +147,167 @@ async countAllUsers(): Promise<{ count: number }> {
     const count = await this.prisma.class.count();
     return { count };
   }
+  
+// async getUsersByRole(role: string) {
+//     const normalizedRole = role?.toUpperCase();
 
+//     if (normalizedRole === 'TEACHER') {
+//       return this.prisma.teacher.findMany({
+//         include: {
+//           user: {
+//             select: {
+//               id: true,
+//               username: true,
+//                name: true,
+//               role: true,
+//             },
+//           },
+//         },
+//       });
+//     }
+
+//     if (normalizedRole === 'STUDENT') {
+//       return this.prisma.student.findMany({
+//         include: {
+//           user: {
+//             select: {
+//               id: true,
+//               username: true,
+//               name: true,
+
+//               role: true,
+//             },
+//           },
+//         },
+//       });
+//     }
+
+//     if (normalizedRole === 'PARENT') {
+//       return this.prisma.parent.findMany({
+//         include: {
+//           user: {
+//             select: {
+//               id: true,
+//               username: true,
+//              name: true,
+//               role: true,
+//             },
+//           },
+//         },
+//       });
+//     }
+
+//     // اگر ADMIN یا نقش نامعتبر باشه
+    
+
+//   }
+async getPendingUsersByRole(role: Role) {
+  return this.prisma.user.findMany({
+    where: {
+      role,
+      isConfirmed: false,
+    },
+  });
+}
+
+async confirmUser(userId: string, body: { classId?: string; parentId?: string }) {
+  const user = await this.prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('کاربر یافت نشد');
+
+  if (user.isConfirmed) throw new Error('کاربر قبلاً تأیید شده است');
+
+  await this.prisma.user.update({
+    where: { id: userId },
+    data: { isConfirmed: true },
+  });
+
+  if (user.role === 'TEACHER') {
+    return this.prisma.teacher.create({
+      data: {
+        userId: user.id,
+      },
+    });
+  }
+
+  if (user.role === 'STUDENT') {
+    if (!body.classId) throw new Error('classId الزامی است برای دانش‌آموز');
+    return this.prisma.student.create({
+      data: {
+        userId: user.id,
+        classId: body.classId,
+        parentId: body.parentId || null,
+      },
+    });
+  }
+
+  if (user.role === 'PARENT') {
+    return this.prisma.parent.create({
+      data: {
+        userId: user.id,
+      },
+    });
+  }
+
+  return { message: 'نقش نامعتبر است یا نیازی به تأیید ندارد' };
+}
+// admin.service.ts
+async confirmTeacher(userId: string) {
+  const user = await this.prisma.user.findUnique({ where: { id: userId } })
+  if (!user || user.role !== 'TEACHER') throw new Error('کاربر معتبر نیست')
+
+  // اگر معلم قبلا اضافه شده، تکراری نشه
+  const existing = await this.prisma.teacher.findUnique({ where: { userId } })
+  if (existing) return existing
+
+  return this.prisma.teacher.create({
+    data: {
+      userId,
+    },
+  })
+}
+async confirmStudent(userId: string, classId: string) {
+  // تأیید کاربر
+  await this.prisma.user.update({
+    where: { id: userId },
+    data: { isConfirmed: true },
+  });
+
+  // اضافه کردن به جدول Student
+  return this.prisma.student.create({
+    data: {
+      userId,
+      classId,
+    },
+  });
+}
+
+async confirmParent(userId: string) {
+  // ۱. اطمینان از وجود کاربر با نقش PARENT
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user || user.role !== 'PARENT') {
+    throw new NotFoundException('کاربر والد یافت نشد یا نقش نامعتبر است');
+  }
+
+  // ۲. بررسی اینکه آیا قبلاً در جدول Parent ثبت شده یا نه
+  const alreadyConfirmed = await this.prisma.parent.findUnique({
+    where: { userId },
+  });
+
+  if (alreadyConfirmed) {
+    throw new BadRequestException('این کاربر قبلاً تأیید شده است');
+  }
+
+  // ۳. افزودن به جدول Parent
+  await this.prisma.parent.create({
+    data: {
+      userId,
+    },
+  });
+
+  return { message: 'والد با موفقیت تأیید شد' };
+}
 
 }

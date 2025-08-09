@@ -3,15 +3,15 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma/prisma.service';
 
-@Injectable()
+@Injectable() 
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: 'secret-key',
-    });
+    }); 
   }
-
+ 
   // برگرداندن کل موجودیت کاربر از دیتابیس
 async validate(payload: any) {
   const user = await this.prisma.user.findUnique({
