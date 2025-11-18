@@ -43,7 +43,7 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-center py-8">
-            این بخش به زودی اضافه خواهد شد...
+            soon add
           </p>
         </CardContent>
       </Card>
