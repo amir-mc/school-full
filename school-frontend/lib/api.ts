@@ -1,28 +1,37 @@
+// lib/api.ts (بررسی نهایی)
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000', // Your Go backend URL
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000,
 });
 
-// Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // You can modify requests here (e.g., add auth tokens)
+    console.log(`🔄 Making ${config.method?.toUpperCase()} request to: ${config.url}`);
+    
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('✅ Token added to headers');
+      }
+    }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`✅ Response received: ${response.status}`);
+    return response;
+  },
   (error) => {
-    // Handle errors globally
+    console.error(`❌ API Error: ${error.config?.url} - ${error.response?.status}`);
     return Promise.reject(error);
   }
 );

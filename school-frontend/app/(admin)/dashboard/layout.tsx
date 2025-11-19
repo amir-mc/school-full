@@ -2,6 +2,7 @@
 "use client"
 
 import Header from "./components/Header"
+import RouteGuard from "./components/RouteGuard"
 import Sidebar from "./components/Sidebar"
 
 
@@ -19,7 +20,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-6">
+          <RouteGuard>
+
           {children}
+          </RouteGuard>
         </main>
       </div>
     </div>

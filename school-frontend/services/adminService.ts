@@ -1,22 +1,40 @@
 // services/adminService.ts
-import api from '../lib/api';
+import api from '@/lib/api';
 
-export const getTotalUsers = (token: string) => 
-  api.get('/admin/users/count/all', { 
-    headers: { Authorization: `Bearer ${token}` } 
-  });
+export const getTotalUsers = () => 
+  api.get('/admin/users/count/all');
 
-export const getStudentCount = (token: string) => 
-  api.get('/admin/users/count/students', { 
-    headers: { Authorization: `Bearer ${token}` } 
-  });
+export const getStudentCount = () => 
+  api.get('/admin/users/count/students');
 
-export const getTeacherCount = (token: string) => 
-  api.get('/admin/users/count/teachers', { 
-    headers: { Authorization: `Bearer ${token}` } 
-  });
+export const getTeacherCount = () => 
+  api.get('/admin/users/count/teachers');
 
-export const getClassCount = (token: string) => 
-  api.get('/admin/classes/count', { 
-    headers: { Authorization: `Bearer ${token}` } 
-  });
+export const getParentCount = () => 
+  api.get('/admin/users/count/parents');
+
+export const getClassCount = () => 
+  api.get('/admin/classes/count');
+
+export const getClasses = () =>
+  api.get('/admin/classes');
+
+export const getUsers = (params?: { 
+  query?: string; 
+  role?: string; 
+  classId?: string;
+  isConfirmed?: boolean;
+}) =>
+  api.get('/admin/users', { params });
+
+export const createUser = (userData: any) =>
+  api.post('/admin/users', userData);
+
+export const deleteUser = (userId: string) =>
+  api.delete(`/admin/users/${userId}`);
+
+export const updateUser = (userId: string, userData: any) =>
+  api.patch(`/admin/users/${userId}`, userData);
+
+export const getUserById = (userId: string) =>
+  api.get(`/admin/users/${userId}`);
