@@ -38,3 +38,11 @@ export const updateUser = (userId: string, userData: any) =>
 
 export const getUserById = (userId: string) =>
   api.get(`/admin/users/${userId}`);
+
+export const confirmUser = (userId: string, classId?: string) => {
+  const payload = classId ? { classId } : {};
+  return api.post(`/admin/users/confirm/${userId}`, payload);
+};
+
+export const updateUserConfirmation = (userId: string, isConfirmed: boolean) =>
+  api.patch(`/admin/users/${userId}`, { isConfirmed });

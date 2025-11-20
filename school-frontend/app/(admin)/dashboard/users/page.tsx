@@ -1,4 +1,4 @@
-// app/(admin)/dashboard/users/page.tsx
+// app/(admin)/dashboard/users/page.tsx (نسخه ساده‌شده)
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,14 +6,6 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -25,13 +17,14 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Search, 
   UserPlus, 
-  Edit, 
-  Trash2, 
   Filter,
   Users,
-  X
+  X,
 } from 'lucide-react';
-import { getUsers, deleteUser } from '@/services/adminService';
+import { getUsers } from '@/services/adminService';
+import UsersTable from '../components/users/UsersTable';
+import UsersStats from '../components/users/UsersStats';
+
 
 interface User {
   id: string;
@@ -46,26 +39,19 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all'); // مقدار پیش‌فرض غیرخالی
-  const [statusFilter, setStatusFilter] = useState('all'); // فیلتر وضعیت تأیید
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const router = useRouter();
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       
-      // ساخت پارامترهای جستجو
       const params: any = {};
       if (searchQuery) params.query = searchQuery;
       if (roleFilter !== 'all') params.role = roleFilter;
       if (statusFilter !== 'all') params.isConfirmed = statusFilter === 'confirmed';
 
-      console.log('🔄 Fetching users with params:', params);
-      
       const response = await getUsers(params);
       setUsers(response.data);
     } catch (error) {
@@ -74,6 +60,10 @@ export default function UsersPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,52 +74,13 @@ export default function UsersPage() {
     setSearchQuery('');
     setRoleFilter('all');
     setStatusFilter('all');
-    // بعد از ریست، کاربران رو دوباره بگیر
     setTimeout(() => fetchUsers(), 100);
   };
 
-  const handleDelete = async (userId: string) => {
-    if (!confirm('آیا از حذف این کاربر مطمئن هستید؟')) return;
-
-    try {
-      await deleteUser(userId);
-      setUsers(users.filter(user => user.id !== userId));
-      alert('✅ کاربر با موفقیت حذف شد');
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      alert('خطا در حذف کاربر');
-    }
+  const handleEditUser = (userId: string) => {
+    router.push(`/dashboard/users/edit/${userId}`);
   };
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'ADMIN': return 'destructive';
-      case 'TEACHER': return 'default';
-      case 'STUDENT': return 'secondary';
-      case 'PARENT': return 'outline';
-      default: return 'secondary';
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    const roles = {
-      'ADMIN': 'مدیر',
-      'TEACHER': 'معلم',
-      'STUDENT': 'دانش‌آموز',
-      'PARENT': 'والد'
-    };
-    return roles[role as keyof typeof roles] || role;
-  };
-
-  const getStatusLabel = (isConfirmed: boolean) => {
-    return isConfirmed ? 'تأیید شده' : 'در انتظار تأیید';
-  };
-
-  const getStatusVariant = (isConfirmed: boolean) => {
-    return isConfirmed ? "default" : "secondary";
-  };
-
-  // محاسبه تعداد فیلترهای فعال
   const activeFiltersCount = [
     searchQuery,
     roleFilter !== 'all',
@@ -181,7 +132,6 @@ export default function UsersPage() {
         <CardContent>
           <form onSubmit={handleSearch} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* جستجو */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">جستجو</label>
                 <Input
@@ -192,7 +142,6 @@ export default function UsersPage() {
                 />
               </div>
 
-              {/* فیلتر نقش */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">نقش</label>
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
@@ -209,7 +158,6 @@ export default function UsersPage() {
                 </Select>
               </div>
 
-              {/* فیلتر وضعیت */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">وضعیت تأیید</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -277,105 +225,17 @@ export default function UsersPage() {
               )}
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>نام کاربر</TableHead>
-                    <TableHead>نام کاربری</TableHead>
-                    <TableHead>نقش</TableHead>
-                    <TableHead>وضعیت</TableHead>
-                    <TableHead>تاریخ ایجاد</TableHead>
-                    <TableHead>عملیات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell className="font-mono text-sm">{user.username}</TableCell>
-                      <TableCell>
-                        <Badge variant={getRoleBadgeVariant(user.role)}>
-                          {getRoleLabel(user.role)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusVariant(user.isConfirmed)}>
-                          {getStatusLabel(user.isConfirmed)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(user.createdAt).toLocaleDateString('fa-IR')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => router.push(`/dashboard/users/edit/${user.id}`)}
-                            title="ویرایش کاربر"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDelete(user.id)}
-                            title="حذف کاربر"
-                            disabled={user.role === 'ADMIN'} // جلوگیری از حذف ادمین
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        {user.role === 'ADMIN' && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            امکان حذف مدیر وجود ندارد
-                          </p>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <UsersTable 
+              users={users}
+              onUserUpdated={fetchUsers}
+              onEditUser={handleEditUser}
+            />
           )}
         </CardContent>
       </Card>
 
-      {/* آمار سریع */}
-      {users.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>آمار کاربران</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{users.length}</div>
-                <div className="text-sm text-blue-800">کل کاربران</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {users.filter(u => u.isConfirmed).length}
-                </div>
-                <div className="text-sm text-green-800">تأیید شده</div>
-              </div>
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {users.filter(u => !u.isConfirmed).length}
-                </div>
-                <div className="text-sm text-yellow-800">در انتظار تأیید</div>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  {users.filter(u => u.role === 'ADMIN').length}
-                </div>
-                <div className="text-sm text-purple-800">مدیر سیستم</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* آمار */}
+      {users.length > 0 && <UsersStats users={users} />}
     </div>
   );
 }
