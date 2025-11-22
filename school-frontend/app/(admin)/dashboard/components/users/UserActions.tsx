@@ -7,7 +7,9 @@ import {
   Edit, 
   Trash2, 
   CheckCircle,
-  XCircle
+  XCircle,
+  Link,
+  User
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -19,19 +21,24 @@ interface UserActionsProps {
   };
   onUserUpdated: () => void;
   onEdit: (userId: string) => void;
+  onConnectStudentToParent?: (studentId: string) => void;
 }
 
-export default function UserActions({ user, onUserUpdated, onEdit }: UserActionsProps) {
+export default function UserActions({ 
+  user, 
+  onUserUpdated, 
+  onEdit, 
+  onConnectStudentToParent 
+}: UserActionsProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // تابع تأیید کاربر - استفاده از آپدیت مستقیم
+  // تابع تأیید کاربر
   const handleConfirmUser = async () => {
     setActionLoading('confirm');
     
     try {
       console.log('📤 Directly updating user confirmation:', user.id);
       
-      // آپدیت مستقیم فیلد isConfirmed
       const response = await api.patch(`/admin/users/${user.id}`, {
         isConfirmed: true
       });
@@ -40,18 +47,10 @@ export default function UserActions({ user, onUserUpdated, onEdit }: UserActions
       
       if (response.status === 200) {
         alert('✅ کاربر با موفقیت تأیید شد');
-        onUserUpdated(); // لیست رو رفرش کن
+        onUserUpdated();
       }
     } catch (error: any) {
       console.error('❌ Error updating user:', error);
-      
-      if (error.response) {
-        console.error('Error details:', {
-          status: error.response.status,
-          data: error.response.data
-        });
-      }
-      
       alert(`خطا در تأیید کاربر: ${error.response?.data?.message || error.message}`);
     } finally {
       setActionLoading(null);
@@ -94,6 +93,13 @@ export default function UserActions({ user, onUserUpdated, onEdit }: UserActions
     }
   };
 
+  // تابع اتصال دانش‌آموز به والد
+  const handleConnectToParent = () => {
+    if (onConnectStudentToParent) {
+      onConnectStudentToParent(user.id);
+    }
+  };
+
   return (
     <div className="flex gap-2 flex-wrap">
       {/* دکمه‌های تأیید/رد برای کاربران تأیید نشده */}
@@ -128,6 +134,20 @@ export default function UserActions({ user, onUserUpdated, onEdit }: UserActions
             )}
           </Button>
         </>
+      )}
+
+      {/* دکمه اتصال به والد - فقط برای دانش‌آموزان تأیید شده */}
+      {user.role === 'STUDENT' && user.isConfirmed && onConnectStudentToParent && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleConnectToParent}
+          disabled={!!actionLoading}
+          className="text-blue-600 border-blue-200 hover:bg-blue-50"
+          title="اتصال به والد"
+        >
+          <Link className="h-4 w-4" />
+        </Button>
       )}
 
       {/* دکمه ویرایش برای همه کاربران */}

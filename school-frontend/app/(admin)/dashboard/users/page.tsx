@@ -1,4 +1,4 @@
-// app/(admin)/dashboard/users/page.tsx (نسخه ساده‌شده)
+// app/(admin)/dashboard/users/page.tsx (قسمت‌های اضافه شده)
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,6 +24,7 @@ import {
 import { getUsers } from '@/services/adminService';
 import UsersTable from '../components/users/UsersTable';
 import UsersStats from '../components/users/UsersStats';
+import ConnectStudentToParentModal from '../components/users/ConnectStudentToParentModal';
 
 
 interface User {
@@ -41,6 +42,11 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  
+  // stateهای مربوط به مودال اتصال
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<{ id: string; name: string } | null>(null);
+  
   const router = useRouter();
 
   const fetchUsers = async () => {
@@ -64,6 +70,26 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // تابع باز کردن مودال اتصال
+  const handleConnectStudentToParent = (studentId: string) => {
+    const student = users.find(u => u.id === studentId);
+    if (student) {
+      setSelectedStudent({ id: studentId, name: student.name });
+      setConnectModalOpen(true);
+    }
+  };
+
+  // تابع بستن مودال
+  const handleCloseConnectModal = () => {
+    setConnectModalOpen(false);
+    setSelectedStudent(null);
+  };
+
+  // تابع موفقیت‌آمیز بودن اتصال
+  const handleConnectionSuccess = () => {
+    fetchUsers(); // بروزرسانی لیست
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,6 +255,7 @@ export default function UsersPage() {
               users={users}
               onUserUpdated={fetchUsers}
               onEditUser={handleEditUser}
+              onConnectStudentToParent={handleConnectStudentToParent}
             />
           )}
         </CardContent>
@@ -236,6 +263,17 @@ export default function UsersPage() {
 
       {/* آمار */}
       {users.length > 0 && <UsersStats users={users} />}
+
+      {/* مودال اتصال دانش‌آموز به والد */}
+      {selectedStudent && (
+       <ConnectStudentToParentModal
+  isOpen={connectModalOpen}
+  onClose={handleCloseConnectModal}
+  studentUserId={selectedStudent.id} // تغییر به studentUserId
+  studentName={selectedStudent.name}
+  onSuccess={handleConnectionSuccess}
+/>
+      )}
     </div>
   );
 }

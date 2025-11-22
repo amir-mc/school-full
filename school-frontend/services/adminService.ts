@@ -19,13 +19,7 @@ export const getClassCount = () =>
 export const getClasses = () =>
   api.get('/admin/classes');
 
-export const getUsers = (params?: { 
-  query?: string; 
-  role?: string; 
-  classId?: string;
-  isConfirmed?: boolean;
-}) =>
-  api.get('/admin/users', { params });
+
 
 export const createUser = (userData: any) =>
   api.post('/admin/users', userData);
@@ -46,3 +40,17 @@ export const confirmUser = (userId: string, classId?: string) => {
 
 export const updateUserConfirmation = (userId: string, isConfirmed: boolean) =>
   api.patch(`/admin/users/${userId}`, { isConfirmed });
+
+
+export const getUsers = (params?: { 
+  query?: string; 
+  role?: string; 
+  classId?: string;
+  isConfirmed?: boolean;
+}) =>
+  api.get('/admin/users', { 
+    params: {
+      ...params,
+      includeStudentDetails: true // اضافه کردن این پارامتر
+    }
+  });

@@ -1,4 +1,4 @@
-// components/users/UsersTable.tsx
+// components/users/UsersTable.tsx (آپدیت شده)
 import { 
   Table, 
   TableBody, 
@@ -17,15 +17,24 @@ interface User {
   role: 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
   isConfirmed: boolean;
   createdAt: string;
+  // برای دانش‌آموزان
+  student?: {
+    parent?: {
+      user: {
+        name: string;
+      };
+    };
+  };
 }
 
 interface UsersTableProps {
   users: User[];
   onUserUpdated: () => void;
   onEditUser: (userId: string) => void;
+  onConnectStudentToParent?: (studentId: string) => void;
 }
 
-export default function UsersTable({ users, onUserUpdated, onEditUser }: UsersTableProps) {
+export default function UsersTable({ users, onUserUpdated, onEditUser, onConnectStudentToParent }: UsersTableProps) {
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'ADMIN': return 'destructive';
@@ -63,6 +72,7 @@ export default function UsersTable({ users, onUserUpdated, onEditUser }: UsersTa
             <TableHead>نام کاربری</TableHead>
             <TableHead>نقش</TableHead>
             <TableHead>وضعیت</TableHead>
+            <TableHead>والد متصل</TableHead>
             <TableHead>تاریخ ایجاد</TableHead>
             <TableHead className="w-[200px]">عملیات</TableHead>
           </TableRow>
@@ -82,6 +92,19 @@ export default function UsersTable({ users, onUserUpdated, onEditUser }: UsersTa
                   {getStatusLabel(user.isConfirmed)}
                 </Badge>
               </TableCell>
+              <TableCell>
+                {user.role === 'STUDENT' && user.student?.parent ? (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    {user.student.parent.user.name}
+                  </Badge>
+                ) : user.role === 'STUDENT' ? (
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                    بدون والد
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {new Date(user.createdAt).toLocaleDateString('fa-IR')}
               </TableCell>
@@ -90,6 +113,7 @@ export default function UsersTable({ users, onUserUpdated, onEditUser }: UsersTa
                   user={user}
                   onUserUpdated={onUserUpdated}
                   onEdit={onEditUser}
+                  onConnectStudentToParent={onConnectStudentToParent}
                 />
                 
                 {/* پیام برای کاربران ادمین */}
