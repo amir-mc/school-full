@@ -14,7 +14,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Link, User, Search } from 'lucide-react';
+import { Link, User, Search, CheckCircle, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import api from '@/lib/api';
 
 interface Parent {
@@ -28,8 +29,16 @@ interface Parent {
 }
 
 interface Student {
-  id: string; // این id رکورد Student هست
+  id: string;
   userId: string;
+  parentId: string | null;
+  parent?: {
+    id: string;
+    user: {
+      name: string;
+      username: string;
+    };
+  };
   user: {
     id: string;
     name: string;
@@ -39,7 +48,7 @@ interface Student {
 interface ConnectStudentToParentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  studentUserId: string; // تغییر نام به studentUserId
+  studentUserId: string;
   studentName: string;
   onSuccess: () => void;
 }
@@ -47,7 +56,7 @@ interface ConnectStudentToParentModalProps {
 export default function ConnectStudentToParentModal({
   isOpen,
   onClose,
-  studentUserId, // حالا userId دانش‌آموز رو دریافت می‌کنه
+  studentUserId,
   studentName,
   onSuccess
 }: ConnectStudentToParentModalProps) {
@@ -55,7 +64,8 @@ export default function ConnectStudentToParentModal({
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredParents, setFilteredParents] = useState<Parent[]>([]);
   const [selectedParentId, setSelectedParentId] = useState('');
-  const [studentRecordId, setStudentRecordId] = useState(''); // id رکورد Student
+  const [studentRecordId, setStudentRecordId] = useState('');
+  const [currentParent, setCurrentParent] = useState<Parent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -70,7 +80,7 @@ export default function ConnectStudentToParentModal({
       setParents(parentsResponse.data);
       setFilteredParents(parentsResponse.data);
 
-      // دریافت دانش‌آموزان برای پیدا کردن studentId
+      // دریافت دانش‌آموزان برای پیدا کردن studentId و والد فعلی
       const studentsResponse = await api.get('/admin/students');
       setStudents(studentsResponse.data);
 
@@ -82,6 +92,17 @@ export default function ConnectStudentToParentModal({
       if (studentRecord) {
         setStudentRecordId(studentRecord.id);
         console.log('🎯 Found student record:', studentRecord);
+
+        // اگر دانش‌آموز قبلاً به والدی متصل شده
+        if (studentRecord.parentId) {
+          const connectedParent = parentsResponse.data.find(
+            (p: Parent) => p.id === studentRecord.parentId
+          );
+          if (connectedParent) {
+            setCurrentParent(connectedParent);
+            console.log('🔗 Student already connected to parent:', connectedParent);
+          }
+        }
       } else {
         console.error('❌ Student record not found for userId:', studentUserId);
         alert('رکورد دانش‌آموز یافت نشد');
@@ -101,6 +122,7 @@ export default function ConnectStudentToParentModal({
       fetchData();
       setSelectedParentId('');
       setSearchQuery('');
+      setCurrentParent(null);
     }
   }, [isOpen]);
 
@@ -129,11 +151,19 @@ export default function ConnectStudentToParentModal({
       return;
     }
 
+    // اگر دانش‌آموز قبلاً به والدی متصل شده، confirm بگیر
+    if (currentParent) {
+      const confirmed = confirm(
+        `این دانش‌آموز قبلاً به والد "${currentParent.user.name}" متصل شده است. آیا می‌خواهید آن را به والد جدید تغییر دهید؟`
+      );
+      if (!confirmed) return;
+    }
+
     setSubmitting(true);
     
     try {
       console.log('📤 Connecting student to parent:', {
-        studentId: studentRecordId, // حالا studentId واقعی رو می‌فرستیم
+        studentId: studentRecordId,
         parentId: selectedParentId
       });
 
@@ -145,7 +175,8 @@ export default function ConnectStudentToParentModal({
       console.log('✅ Connection response:', response);
 
       if (response.status === 200 || response.status === 201) {
-        alert('✅ دانش‌آموز با موفقیت به والد متصل شد');
+        const newParentName = parents.find(p => p.id === selectedParentId)?.user.name;
+        alert(`✅ دانش‌آموز با موفقیت به والد "${newParentName}" متصل شد`);
         onSuccess();
         onClose();
       }
@@ -162,6 +193,42 @@ export default function ConnectStudentToParentModal({
       }
       
       alert(`خطا در اتصال: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // تابع قطع اتصال
+  const handleDisconnect = async () => {
+    if (!currentParent || !studentRecordId) return;
+
+    const confirmed = confirm(
+      `آیا از قطع اتصال دانش‌آموز از والد "${currentParent.user.name}" مطمئن هستید؟`
+    );
+    if (!confirmed) return;
+
+    setSubmitting(true);
+    
+    try {
+      console.log('📤 Disconnecting student from parent:', {
+        studentId: studentRecordId
+      });
+
+      // استفاده از endpoint آپدیت برای تنظیم parentId به null
+      const response = await api.patch(`/admin/students/${studentRecordId}`, {
+        parentId: null
+      });
+
+      console.log('✅ Disconnection response:', response);
+
+      if (response.status === 200) {
+        alert('✅ اتصال دانش‌آموز با موفقیت قطع شد');
+        onSuccess();
+        onClose();
+      }
+    } catch (error: any) {
+      console.error('❌ Error disconnecting student:', error);
+      alert(`خطا در قطع اتصال: ${error.response?.data?.message || error.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -186,6 +253,35 @@ export default function ConnectStudentToParentModal({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* وضعیت اتصال فعلی */}
+          {currentParent && (
+            <Alert className="bg-yellow-50 border-yellow-200">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="font-medium">اتصال فعلی:</span>
+                    <div className="text-sm text-yellow-700 mt-1">
+                      <Badge variant="outline" className="mr-2">
+                        {currentParent.user.name}
+                      </Badge>
+                      <span>({currentParent.user.username})</span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDisconnect}
+                    disabled={submitting}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    قطع اتصال
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* جستجوی والدین */}
           <div className="space-y-2">
             <Label htmlFor="search">جستجوی والدین</Label>
@@ -203,7 +299,14 @@ export default function ConnectStudentToParentModal({
 
           {/* انتخاب والد */}
           <div className="space-y-2">
-            <Label>انتخاب والد</Label>
+            <Label>
+              انتخاب والد جدید
+              {currentParent && (
+                <span className="text-sm text-muted-foreground mr-2">
+                  (برای تغییر والد فعلی)
+                </span>
+              )}
+            </Label>
             {loading ? (
               <div className="text-center py-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
@@ -223,18 +326,41 @@ export default function ConnectStudentToParentModal({
                     key={parent.id}
                     className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${
                       selectedParentId === parent.id ? 'bg-blue-50 border-blue-200' : ''
+                    } ${
+                      currentParent?.id === parent.id ? 'bg-green-50 border-green-200' : ''
                     }`}
-                    onClick={() => setSelectedParentId(parent.id)}
+                    onClick={() => {
+                      if (currentParent?.id !== parent.id) {
+                        setSelectedParentId(parent.id);
+                      }
+                    }}
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="font-medium">{parent.user.name}</p>
+                        <p className="font-medium flex items-center gap-2">
+                          {parent.user.name}
+                          {currentParent?.id === parent.id && (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          )}
+                        </p>
                         <p className="text-sm text-muted-foreground">{parent.user.username}</p>
                       </div>
-                      {selectedParentId === parent.id && (
-                        <Badge variant="default">انتخاب شده</Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {currentParent?.id === parent.id && (
+                          <Badge variant="default" className="bg-green-100 text-green-800">
+                            متصل شده
+                          </Badge>
+                        )}
+                        {selectedParentId === parent.id && currentParent?.id !== parent.id && (
+                          <Badge variant="default">انتخاب شده</Badge>
+                        )}
+                      </div>
                     </div>
+                    {currentParent?.id === parent.id && (
+                      <p className="text-xs text-green-600 mt-1">
+                        این دانش‌آموز قبلاً به این والد متصل شده است
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -242,13 +368,19 @@ export default function ConnectStudentToParentModal({
           </div>
 
           {/* والد انتخاب شده */}
-          {selectedParentId && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-              <p className="text-sm font-medium text-green-800">والد انتخاب شده:</p>
-              <p className="text-green-700">
-                {filteredParents.find(p => p.id === selectedParentId)?.user.name}
-              </p>
-            </div>
+          {selectedParentId && currentParent?.id !== selectedParentId && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <CheckCircle className="h-4 w-4 text-blue-600" />
+              <AlertDescription>
+                <span className="font-medium">والد انتخاب شده:</span>
+                <div className="text-sm text-blue-700 mt-1">
+                  <Badge variant="outline" className="mr-2">
+                    {filteredParents.find(p => p.id === selectedParentId)?.user.name}
+                  </Badge>
+                  <span>({filteredParents.find(p => p.id === selectedParentId)?.user.username})</span>
+                </div>
+              </AlertDescription>
+            </Alert>
           )}
         </div>
 
@@ -262,7 +394,7 @@ export default function ConnectStudentToParentModal({
           </Button>
           <Button
             onClick={handleConnect}
-            disabled={!selectedParentId || !studentRecordId || submitting}
+            disabled={!selectedParentId || !studentRecordId || submitting || currentParent?.id === selectedParentId}
             className="flex items-center gap-2"
           >
             {submitting ? (
@@ -270,7 +402,7 @@ export default function ConnectStudentToParentModal({
             ) : (
               <Link className="h-4 w-4" />
             )}
-            اتصال دانش‌آموز
+            {currentParent ? 'تغییر والد' : 'اتصال دانش‌آموز'}
           </Button>
         </DialogFooter>
       </DialogContent>

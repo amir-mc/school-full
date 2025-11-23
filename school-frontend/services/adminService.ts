@@ -54,3 +54,54 @@ export const getUsers = (params?: {
       includeStudentDetails: true // اضافه کردن این پارامتر
     }
   });
+
+
+
+
+export interface Class {
+  id: string;
+  name: string;
+  grade: number;
+  teachers?: Array<{
+    id: string;
+    user: {
+      id: string;
+      name: string;
+    };
+  }>;
+  students?: Array<{
+    id: string;
+    user: {
+      id: string;
+      name: string;
+    };
+  }>;
+}
+
+export interface CreateClassData {
+  name: string;
+  grade: number;
+  teacherIds?: string[];
+}
+
+
+export const getClassById = (classId: string) =>
+  api.get(`/admin/classes/${classId}`);
+
+export const createClass = (classData: CreateClassData) =>
+  api.post('/admin/classes', classData);
+
+export const updateClass = (classId: string, classData: { name?: string; grade?: number }) =>
+  api.patch(`/admin/classes/${classId}`, classData);
+
+export const deleteClass = (classId: string) =>
+  api.delete(`/admin/classes/${classId}`);
+
+export const addTeacherToClass = (classId: string, teacherId: string) =>
+  api.post(`/admin/classes/${classId}/teachers/${teacherId}`);
+
+export const removeTeacherFromClass = (classId: string, teacherId: string) =>
+  api.delete(`/admin/classes/${classId}/teachers/${teacherId}`);
+
+export const addStudentToClass = (classId: string, studentId: string) =>
+  api.post(`/admin/classes/${classId}/students/${studentId}`);
