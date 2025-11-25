@@ -22,10 +22,12 @@ import {
   Users,
   User,
   UserPlus,
-  UserMinus
+  UserMinus,
+  GraduationCap
 } from 'lucide-react';
 import { deleteClass, getClasses } from '@/services/adminService';
 import ManageClassStudentsModal from '../components/classes/ManageClassStudentsModal';
+import ManageClassTeachersModal from '../components/classes/ManageClassTeachersModal';
 
 
 interface Class {
@@ -56,6 +58,12 @@ export default function ClassesPage() {
     classId: '',
     className: ''
   });
+  const [manageTeachersModal, setManageTeachersModal] = useState({
+  isOpen: false,
+  classId: '',
+  className: ''
+});
+
   const router = useRouter();
 
   useEffect(() => {
@@ -87,6 +95,17 @@ export default function ClassesPage() {
       alert(`خطا در حذف کلاس: ${error.response?.data?.message || error.message}`);
     }
   };
+
+  const handleManageTeachers = (classId: string, className: string) => {
+  setManageTeachersModal({
+    isOpen: true,
+    classId,
+    className
+  });
+};
+const handleTeachersUpdate = () => {
+  fetchClasses(); // بروزرسانی لیست کلاس‌ها
+};
 
   const handleManageStudents = (classId: string, className: string) => {
     setManageStudentsModal({
@@ -187,36 +206,46 @@ export default function ClassesPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleManageStudents(cls.id, cls.name)}
-                            className="flex items-center gap-1"
-                            title="مدیریت دانش‌آموزان"
-                          >
-                            <UserPlus className="h-4 w-4" />
-                            دانش‌آموزان
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => router.push(`/dashboard/classes/edit/${cls.id}`)}
-                            title="ویرایش کلاس"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDelete(cls.id)}
-                            title="حذف کلاس"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                            <TableCell>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleManageStudents(cls.id, cls.name)}
+            className="flex items-center gap-1"
+            title="مدیریت دانش‌آموزان"
+          >
+            <UserPlus className="h-4 w-4" />
+            دانش‌آموزان
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleManageTeachers(cls.id, cls.name)}
+            className="flex items-center gap-1"
+            title="مدیریت معلمان"
+          >
+            <GraduationCap className="h-4 w-4" />
+            معلمان
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/dashboard/classes/edit/${cls.id}`)}
+            title="ویرایش کلاس"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => handleDelete(cls.id)}
+            title="حذف کلاس"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -234,6 +263,13 @@ export default function ClassesPage() {
         className={manageStudentsModal.className}
         onStudentsUpdate={handleStudentsUpdate}
       />
+      <ManageClassTeachersModal
+  isOpen={manageTeachersModal.isOpen}
+  onClose={() => setManageTeachersModal({ isOpen: false, classId: '', className: '' })}
+  classId={manageTeachersModal.classId}
+  className={manageTeachersModal.className}
+  onTeachersUpdate={handleTeachersUpdate}
+/>
     </div>
   );
 }

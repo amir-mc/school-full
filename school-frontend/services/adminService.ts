@@ -105,3 +105,14 @@ export const removeTeacherFromClass = (classId: string, teacherId: string) =>
 
 export const addStudentToClass = (classId: string, studentId: string) =>
   api.post(`/admin/classes/${classId}/students/${studentId}`);
+
+
+// در services/adminService.ts - اضافه کردن سرویس‌های ویرایش
+export const getGradeById = (gradeId: string) =>
+  api.get(`/grades/${gradeId}`);
+
+export const updateGrade = (gradeId: string, gradeData: { subject?: string; value?: number }) =>
+  api.patch(`/grades/${gradeId}`, gradeData);
+
+export const getStudentGrades = (studentId: string) =>
+  api.get(`/grades/student/${studentId}`);
