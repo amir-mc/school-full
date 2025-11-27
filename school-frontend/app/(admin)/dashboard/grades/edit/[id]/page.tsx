@@ -370,7 +370,7 @@ export default function EditGradePage() {
               </div>
             </div>
 
-            {/* مقایسه تغییرات */}
+            {/* مقایسه تغییرات به وجود اومده */}
             {hasChanges() && originalGrade && (
               <Alert className="bg-blue-50 border-blue-200">
                 <CheckCircle2 className="h-4 w-4 text-blue-600" />
