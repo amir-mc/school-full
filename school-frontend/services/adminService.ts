@@ -116,3 +116,27 @@ export const updateGrade = (gradeId: string, gradeData: { subject?: string; valu
 
 export const getStudentGrades = (studentId: string) =>
   api.get(`/grades/student/${studentId}`);
+
+
+
+export const getSchedules = () =>
+  api.get('/schedules');
+
+export const deleteSchedule = (scheduleId: string) =>
+  api.delete(`/schedules/${scheduleId}`);
+
+export const createSchedule = (scheduleData: {
+  classId: string;
+  day: string;
+  subject: string;
+  startTime: string;
+  endTime: string;
+}) => api.post('/schedules', scheduleData);
+
+export const updateSchedule = (scheduleId: string, scheduleData: {
+  classId?: string;
+  day?: string;
+  subject?: string;
+  startTime?: string;
+  endTime?: string;
+}) => api.patch(`/schedules/${scheduleId}`, scheduleData);
