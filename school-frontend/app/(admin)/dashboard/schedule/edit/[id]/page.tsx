@@ -1,4 +1,4 @@
-// app/(admin)/dashboard/schedule/edit/[id]/page.tsx
+// app/(admin)/dashboard/schedule/edit/[id]/page.tsx - آپدیت شده
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -16,14 +16,15 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { 
-  ArrowRight, 
+  Save,
+  RotateCcw,
   Calendar,
   Clock,
   School,
   BookOpen,
-  Save,
-  RotateCcw
+  Bell
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -47,6 +48,66 @@ interface Class {
   grade: number;
 }
 
+// سیستم زنگ‌های کلاسی
+const classBells = [
+  {
+    id: 'bell-1',
+    name: 'زنگ اول',
+    startTime: '07:30',
+    endTime: '09:00',
+    duration: 90,
+    label: '7:30 - 9:00'
+  },
+  {
+    id: 'bell-2',
+    name: 'زنگ دوم',
+    startTime: '09:15',
+    endTime: '10:45',
+    duration: 90,
+    label: '9:15 - 10:45'
+  },
+  {
+    id: 'bell-3',
+    name: 'زنگ سوم',
+    startTime: '10:55',
+    endTime: '12:20',
+    duration: 85,
+    label: '10:55 - 12:20'
+  },
+  {
+    id: 'bell-4',
+    name: 'زنگ چهارم',
+    startTime: '12:30',
+    endTime: '14:00',
+    duration: 90,
+    label: '12:30 - 14:00'
+  },
+  {
+    id: 'custom',
+    name: 'زنگ سفارشی',
+    startTime: '',
+    endTime: '',
+    duration: 0,
+    label: 'سفارشی'
+  },
+  {
+    id: 'double',
+    name: 'دو زنگ متوالی',
+    startTime: '07:30',
+    endTime: '10:45',
+    duration: 180,
+    label: 'دو زنگ'
+  },
+  {
+    id: 'extra',
+    name: 'کلاس فوق‌العاده',
+    startTime: '14:30',
+    endTime: '16:30',
+    duration: 120,
+    label: 'فوق‌العاده'
+  }
+];
+
 export default function EditSchedulePage() {
   const params = useParams();
   const scheduleId = params.id as string;
@@ -59,6 +120,9 @@ export default function EditSchedulePage() {
     startTime: '',
     endTime: ''
   });
+  const [selectedBell, setSelectedBell] = useState('');
+  const [customStartTime, setCustomStartTime] = useState('');
+  const [customEndTime, setCustomEndTime] = useState('');
   const [originalSchedule, setOriginalSchedule] = useState<Schedule | null>(null);
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +153,10 @@ export default function EditSchedulePage() {
     'هنر',
     'ورزش',
     'مشاوره',
-    'آزمون'
+    'آزمون',
+    'کارگاه',
+    'پژوهش',
+    'کلاس فوق‌العاده'
   ];
 
   useEffect(() => {
@@ -98,6 +165,33 @@ export default function EditSchedulePage() {
       fetchClasses();
     }
   }, [scheduleId]);
+
+  useEffect(() => {
+    // تعیین زنگ بر اساس زمان‌های فعلی
+    if (formData.startTime && formData.endTime) {
+      detectBellType();
+    }
+  }, [formData.startTime, formData.endTime]);
+
+  useEffect(() => {
+    // وقتی زنگ انتخاب شد، زمان‌ها رو تنظیم کن
+    if (selectedBell) {
+      const bell = classBells.find(b => b.id === selectedBell);
+      if (bell && selectedBell !== 'custom') {
+        setFormData(prev => ({
+          ...prev,
+          startTime: bell.startTime,
+          endTime: bell.endTime
+        }));
+      } else if (selectedBell === 'custom') {
+        setFormData(prev => ({
+          ...prev,
+          startTime: customStartTime,
+          endTime: customEndTime
+        }));
+      }
+    }
+  }, [selectedBell, customStartTime, customEndTime]);
 
   const fetchScheduleData = async () => {
     try {
@@ -121,6 +215,10 @@ export default function EditSchedulePage() {
         endTime: specificSchedule.endTime
       });
 
+      // تنظیم زمان‌های سفارشی
+      setCustomStartTime(specificSchedule.startTime);
+      setCustomEndTime(specificSchedule.endTime);
+
     } catch (error: any) {
       console.error('Error fetching schedule data:', error);
       alert(`خطا در دریافت اطلاعات برنامه: ${error.response?.data?.message || error.message}`);
@@ -139,6 +237,36 @@ export default function EditSchedulePage() {
     }
   };
 
+  const detectBellType = () => {
+    const { startTime, endTime } = formData;
+    
+    // بررسی زنگ‌های استاندارد
+    const matchedBell = classBells.find(bell => 
+      bell.id !== 'custom' && bell.id !== 'double' && bell.id !== 'extra' &&
+      bell.startTime === startTime && bell.endTime === endTime
+    );
+    
+    if (matchedBell) {
+      setSelectedBell(matchedBell.id);
+      return;
+    }
+
+    // بررسی دو زنگ متوالی
+    if (startTime === '07:30' && endTime === '10:45') {
+      setSelectedBell('double');
+      return;
+    }
+
+    // بررسی کلاس فوق‌العاده
+    if (startTime === '14:30' && endTime === '16:30') {
+      setSelectedBell('extra');
+      return;
+    }
+
+    // اگر هیچکدام نبود، سفارشی
+    setSelectedBell('custom');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -149,6 +277,13 @@ export default function EditSchedulePage() {
 
     if (formData.startTime >= formData.endTime) {
       alert('زمان پایان باید بعد از زمان شروع باشد');
+      return;
+    }
+
+    // بررسی تداخل زمانی (به جز برنامه فعلی)
+    const hasConflict = await checkTimeConflict();
+    if (hasConflict) {
+      alert('❌ تداخل زمانی: در این بازه زمانی برای کلاس انتخاب شده برنامه دیگری وجود دارد');
       return;
     }
 
@@ -175,6 +310,29 @@ export default function EditSchedulePage() {
     }
   };
 
+  const checkTimeConflict = async (): Promise<boolean> => {
+    try {
+      const response = await api.get('/schedules');
+      const existingSchedules = response.data;
+
+      const conflicts = existingSchedules.filter((schedule: any) => 
+        schedule.id !== scheduleId && // برنامه فعلی رو نادیده بگیر
+        schedule.classId === formData.classId &&
+        schedule.day === formData.day &&
+        (
+          (formData.startTime >= schedule.startTime && formData.startTime < schedule.endTime) ||
+          (formData.endTime > schedule.startTime && formData.endTime <= schedule.endTime) ||
+          (formData.startTime <= schedule.startTime && formData.endTime >= schedule.endTime)
+        )
+      );
+
+      return conflicts.length > 0;
+    } catch (error) {
+      console.error('Error checking time conflict:', error);
+      return false;
+    }
+  };
+
   const handleReset = () => {
     if (originalSchedule) {
       setFormData({
@@ -184,6 +342,9 @@ export default function EditSchedulePage() {
         startTime: originalSchedule.startTime,
         endTime: originalSchedule.endTime
       });
+      setCustomStartTime(originalSchedule.startTime);
+      setCustomEndTime(originalSchedule.endTime);
+      detectBellType();
     }
   };
 
@@ -211,6 +372,16 @@ export default function EditSchedulePage() {
     return `${formattedHour}:${minutes} ${period}`;
   };
 
+  const getBellDurationLabel = () => {
+    const duration = calculateDuration();
+    if (duration <= 0) return '';
+    
+    if (duration <= 60) return `${duration} دقیقه`;
+    const hours = Math.floor(duration / 60);
+    const minutes = duration % 60;
+    return `${hours} ساعت و ${minutes} دقیقه`;
+  };
+
   const hasChanges = () => {
     if (!originalSchedule) return false;
     
@@ -221,6 +392,10 @@ export default function EditSchedulePage() {
       formData.startTime !== originalSchedule.startTime ||
       formData.endTime !== originalSchedule.endTime
     );
+  };
+
+  const getSelectedClass = () => {
+    return classes.find(c => c.id === formData.classId);
   };
 
   if (loading) {
@@ -270,9 +445,25 @@ export default function EditSchedulePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* اطلاعات اصلی برنامه */}
+            <div className="p-4 border rounded-md bg-gray-50 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">کلاس:</span>
+                <Badge variant="outline">{originalSchedule.class.name}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-medium">روز:</span>
+                <Badge variant="secondary">{originalSchedule.day}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-medium">زمان فعلی:</span>
+                <span>{formatTime(originalSchedule.startTime)} - {formatTime(originalSchedule.endTime)}</span>
+              </div>
+            </div>
+
             {/* انتخاب کلاس */}
             <div className="space-y-2">
-              <Label htmlFor="class">کلاس *</Label>
+              <Label htmlFor="class">کلاس جدید</Label>
               <Select 
                 value={formData.classId} 
                 onValueChange={(value) => handleChange('classId', value)}
@@ -300,7 +491,7 @@ export default function EditSchedulePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* روز هفته */}
               <div className="space-y-2">
-                <Label htmlFor="day">روز هفته *</Label>
+                <Label htmlFor="day">روز هفته</Label>
                 <Select 
                   value={formData.day} 
                   onValueChange={(value) => handleChange('day', value)}
@@ -320,7 +511,7 @@ export default function EditSchedulePage() {
 
               {/* درس */}
               <div className="space-y-2">
-                <Label htmlFor="subject">درس *</Label>
+                <Label htmlFor="subject">درس</Label>
                 <Select 
                   value={formData.subject} 
                   onValueChange={(value) => handleChange('subject', value)}
@@ -339,32 +530,82 @@ export default function EditSchedulePage() {
               </div>
             </div>
 
-            {/* زمان‌بندی */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* زمان شروع */}
-              <div className="space-y-2">
-                <Label htmlFor="startTime">زمان شروع *</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={formData.startTime}
-                  onChange={(e) => handleChange('startTime', e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* زمان پایان */}
-              <div className="space-y-2">
-                <Label htmlFor="endTime">زمان پایان *</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={formData.endTime}
-                  onChange={(e) => handleChange('endTime', e.target.value)}
-                  required
-                />
-              </div>
+            {/* سیستم زنگ‌های کلاسی */}
+            <div className="space-y-4">
+              <Label className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                انتخاب زنگ کلاسی
+              </Label>
+              
+              <RadioGroup 
+                value={selectedBell} 
+                onValueChange={setSelectedBell}
+                className="grid grid-cols-2 md:grid-cols-3 gap-3"
+              >
+                {classBells.map((bell) => (
+                  <div key={bell.id} className="flex items-center space-x-2">
+                    <RadioGroupItem value={bell.id} id={bell.id} />
+                    <Label 
+                      htmlFor={bell.id} 
+                      className={`flex-1 cursor-pointer p-3 rounded-md border-2 transition-all ${
+                        selectedBell === bell.id 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <span className="font-medium text-sm">{bell.name}</span>
+                        {bell.label && (
+                          <span className="text-xs text-muted-foreground mt-1">
+                            {bell.label}
+                          </span>
+                        )}
+                        {bell.duration > 0 && bell.id !== 'custom' && (
+                          <Badge variant="secondary" className="mt-1 text-xs">
+                            {bell.duration} دقیقه
+                          </Badge>
+                        )}
+                      </div>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
+
+            {/* زمان‌بندی سفارشی */}
+            {selectedBell === 'custom' && (
+              <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+                <Label className="text-sm font-medium">زمان‌بندی سفارشی</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="customStartTime">زمان شروع *</Label>
+                    <Input
+                      id="customStartTime"
+                      type="time"
+                      value={customStartTime}
+                      onChange={(e) => {
+                        setCustomStartTime(e.target.value);
+                        handleChange('startTime', e.target.value);
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="customEndTime">زمان پایان *</Label>
+                    <Input
+                      id="customEndTime"
+                      type="time"
+                      value={customEndTime}
+                      onChange={(e) => {
+                        setCustomEndTime(e.target.value);
+                        handleChange('endTime', e.target.value);
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* اطلاعات زمان‌بندی */}
             {(formData.startTime && formData.endTime) && (
@@ -377,7 +618,7 @@ export default function EditSchedulePage() {
                 <AlertDescription>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span>بازه زمانی:</span>
+                      <span>بازه زمانی جدید:</span>
                       <span className="font-medium">
                         {formatTime(formData.startTime)} - {formatTime(formData.endTime)}
                       </span>
@@ -389,9 +630,64 @@ export default function EditSchedulePage() {
                           ? 'destructive' 
                           : 'default'
                       }>
-                        {calculateDuration()} دقیقه
+                        {getBellDurationLabel()}
                       </Badge>
                     </div>
+                    {formData.startTime >= formData.endTime && (
+                      <div className="text-red-600 text-sm font-medium">
+                        ⚠️ زمان پایان باید بعد از زمان شروع باشد
+                      </div>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* مقایسه تغییرات */}
+            {hasChanges() && originalSchedule && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertDescription>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span>زمان:</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="line-through text-red-600">
+                          {formatTime(originalSchedule.startTime)} - {formatTime(originalSchedule.endTime)}
+                        </Badge>
+                        <span className="text-blue-600">→</span>
+                        <Badge variant="default">
+                          {formatTime(formData.startTime)} - {formatTime(formData.endTime)}
+                        </Badge>
+                      </div>
+                    </div>
+                    {formData.day !== originalSchedule.day && (
+                      <div className="flex justify-between items-center">
+                        <span>روز:</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="line-through text-red-600">
+                            {originalSchedule.day}
+                          </Badge>
+                          <span className="text-blue-600">→</span>
+                          <Badge variant="default">
+                            {formData.day}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+                    {formData.subject !== originalSchedule.subject && (
+                      <div className="flex justify-between items-center">
+                        <span>درس:</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="line-through text-red-600">
+                            {originalSchedule.subject}
+                          </Badge>
+                          <span className="text-blue-600">→</span>
+                          <Badge variant="default">
+                            {formData.subject}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </AlertDescription>
               </Alert>
@@ -432,6 +728,7 @@ export default function EditSchedulePage() {
                   !formData.startTime || 
                   !formData.endTime ||
                   formData.startTime >= formData.endTime ||
+                  !selectedBell ||
                   !hasChanges()
                 }
                 className="flex-1"
