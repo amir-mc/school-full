@@ -103,9 +103,9 @@ export default function LoginForm() {
     </div>
 
     <div className="text-center text-sm text-gray-500">
-      حساب کاربری ندارید؟{' '}
+     مشکل در ورود به حساب کاربری یا پسورد خود را گم کردید؟{' '}
       <a href="#" className="text-blue-600 hover:text-blue-800 hover:underline">
-        ثبت نام کنید
+       اینجا کلیک کنید
       </a>
     </div>
   </div>
