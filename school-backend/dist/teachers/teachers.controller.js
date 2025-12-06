@@ -23,25 +23,50 @@ let TeachersController = class TeachersController {
     constructor(teachersService) {
         this.teachersService = teachersService;
     }
-    async getMyClasses(req) {
-        const userId = req.user?.userId;
+    extractUserId(req) {
+        console.log('Request user object:', req.user);
+        console.log('Request user keys:', Object.keys(req.user));
+        const userId = req.user?.id ||
+            req.user?.sub ||
+            req.user?.userId ||
+            req.user?.user?.id ||
+            req.user?.user_id;
+        console.log('Extracted userId:', userId);
         if (!userId) {
-            throw new Error('توکن نامعتبر یا ناقص است.');
+            throw new Error(`User ID not found in token. Available keys: ${JSON.stringify(req.user)}`);
         }
+        return userId;
+    }
+    async getDashboardStats(req) {
+        const userId = this.extractUserId(req);
+        return this.teachersService.getDashboardStats(userId);
+    }
+    async getMyClasses(req) {
+        const userId = this.extractUserId(req);
         return this.teachersService.getClassesByTeacherUserId(userId);
     }
-    async getStudents(req) {
-        const userId = req.user?.userId;
-        if (!userId) {
-            throw new Error('توکن نامعتبر یا ناقص است.');
-        }
-        return this.teachersService.getStudentsByTeacher(userId);
+    async getClassStudents(req) {
+        const userId = this.extractUserId(req);
+        const classId = req.params.id;
+        return this.teachersService.getClassStudents(classId, userId);
     }
-    getProfile(req) {
-        return this.teachersService.getProfile(req.user.id);
+    async getMyGrades(req) {
+        const userId = this.extractUserId(req);
+        return this.teachersService.getGradesByTeacher(userId);
+    }
+    async getMySchedule(req) {
+        const userId = this.extractUserId(req);
+        return this.teachersService.getScheduleByTeacher(userId);
     }
 };
 exports.TeachersController = TeachersController;
+__decorate([
+    (0, common_1.Get)('dashboard/stats'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], TeachersController.prototype, "getDashboardStats", null);
 __decorate([
     (0, common_1.Get)('classes'),
     __param(0, (0, common_1.Req)()),
@@ -50,19 +75,26 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TeachersController.prototype, "getMyClasses", null);
 __decorate([
-    (0, common_1.Get)('my-students'),
+    (0, common_1.Get)('classes/:id/students'),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], TeachersController.prototype, "getStudents", null);
+], TeachersController.prototype, "getClassStudents", null);
 __decorate([
-    (0, common_1.Get)('me'),
+    (0, common_1.Get)('grades'),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], TeachersController.prototype, "getProfile", null);
+    __metadata("design:returntype", Promise)
+], TeachersController.prototype, "getMyGrades", null);
+__decorate([
+    (0, common_1.Get)('schedule'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], TeachersController.prototype, "getMySchedule", null);
 exports.TeachersController = TeachersController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('TEACHER'),

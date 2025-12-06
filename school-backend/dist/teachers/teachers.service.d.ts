@@ -1,60 +1,41 @@
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 export declare class TeachersService {
     private prisma;
     constructor(prisma: PrismaService);
-    getProfile(userId: string): import("generated/prisma").Prisma.Prisma__TeacherClient<({
-        user: {
+    getDashboardStats(userId: string): Promise<{
+        teacherName: string;
+        activeClasses: number;
+        totalStudents: number;
+        totalGrades: number;
+        averageGrade: number;
+        recentGrades: {
             id: string;
-            name: string;
-            username: string;
-            password: string;
-            role: import("generated/prisma").$Enums.Role;
-            isConfirmed: boolean;
-            createdAt: Date;
-        };
-        classes: ({
-            students: ({
-                user: {
-                    id: string;
-                    name: string;
-                    username: string;
-                    password: string;
-                    role: import("generated/prisma").$Enums.Role;
-                    isConfirmed: boolean;
-                    createdAt: Date;
-                };
-            } & {
-                id: string;
-                userId: string;
-                classId: string;
-                parentId: string | null;
-            })[];
-        } & {
-            grade: number;
-            id: string;
-            name: string;
-        })[];
-        feedbacks: {
-            id: string;
-            parentId: string;
-            teacherId: string;
-            score: number;
-            comment: string | null;
+            studentName: string;
+            subject: string;
+            value: number;
+            date: Date;
         }[];
-    } & {
-        id: string;
-        userId: string;
-    }) | null, null, import("generated/prisma/runtime/library").DefaultArgs, import("generated/prisma").Prisma.PrismaClientOptions>;
+    }>;
     getClassesByTeacherUserId(userId: string): Promise<{
-        grade: number;
         id: string;
         name: string;
+        grade: number;
+        studentCount: number;
+        scheduleCount: number;
+        hasSchedule: boolean;
     }[]>;
-    getStudentsByTeacher(userId: string): Promise<{
-        classId: string;
-        className: string;
+    getClassStudents(classId: string, userId: string): Promise<never[]>;
+    getGradesByTeacher(userId: string): Promise<{
+        id: string;
         studentId: string;
-        name: string;
-        username: string;
+        studentName: string;
+        className: string;
+        subject: string;
+        value: number;
+        createdAt: Date;
+    }[]>;
+    getScheduleByTeacher(userId: string): Promise<{
+        day: string;
+        schedules: any[];
     }[]>;
 }
