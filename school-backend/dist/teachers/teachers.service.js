@@ -18,15 +18,12 @@ let TeachersService = class TeachersService {
         this.prisma = prisma;
     }
     async getDashboardStats(userId) {
-        console.log('📊 getDashboardStats called with userId:', userId);
         try {
             const user = await this.prisma.user.findUnique({
                 where: { id: userId },
                 select: { id: true, name: true, role: true }
             });
-            console.log('Found user:', user);
             if (!user) {
-                console.log('❌ User not found in database');
                 return {
                     teacherName: 'کاربر یافت نشد',
                     activeClasses: 0,
@@ -40,9 +37,7 @@ let TeachersService = class TeachersService {
                 where: { userId },
                 select: { id: true }
             });
-            console.log('Found teacher record:', teacher);
             if (!teacher) {
-                console.log('⚠️ User is not registered as a teacher');
                 return {
                     teacherName: user.name,
                     activeClasses: 0,
@@ -70,7 +65,6 @@ let TeachersService = class TeachersService {
                     }
                 }
             });
-            console.log(`📚 Found ${classes.length} classes for teacher`);
             const totalStudents = classes.reduce((sum, cls) => sum + cls.students.length, 0);
             const grades = await this.getGradesByTeacher(userId);
             const averageGrade = grades.length > 0
@@ -83,7 +77,7 @@ let TeachersService = class TeachersService {
                 value: grade.value,
                 date: grade.createdAt
             }));
-            const result = {
+            return {
                 teacherName: user.name,
                 activeClasses: classes.length,
                 totalStudents,
@@ -91,23 +85,18 @@ let TeachersService = class TeachersService {
                 averageGrade: parseFloat(averageGrade.toFixed(2)),
                 recentGrades
             };
-            console.log('📈 Dashboard stats result:', result);
-            return result;
         }
         catch (error) {
-            console.error('❌ Error in getDashboardStats:', error);
             throw error;
         }
     }
     async getClassesByTeacherUserId(userId) {
-        console.log('🏫 getClassesByTeacherUserId called with userId:', userId);
         try {
             const teacher = await this.prisma.teacher.findUnique({
                 where: { userId },
                 select: { id: true }
             });
             if (!teacher) {
-                console.log('❌ Teacher not found');
                 return [];
             }
             const classes = await this.prisma.class.findMany({
@@ -136,7 +125,7 @@ let TeachersService = class TeachersService {
                     grade: 'asc'
                 }
             });
-            const result = classes.map(cls => ({
+            return classes.map(cls => ({
                 id: cls.id,
                 name: cls.name,
                 grade: cls.grade,
@@ -144,27 +133,85 @@ let TeachersService = class TeachersService {
                 scheduleCount: cls.schedules.length,
                 hasSchedule: cls.schedules.length > 0
             }));
-            console.log(`📚 Returning ${result.length} classes`);
-            return result;
         }
         catch (error) {
-            console.error('❌ Error in getClassesByTeacherUserId:', error);
             return [];
         }
     }
     async getClassStudents(classId, userId) {
-        console.log('👨‍🎓 getClassStudents called:', { classId, userId });
-        return [];
-    }
-    async getGradesByTeacher(userId) {
-        console.log('📝 getGradesByTeacher called with userId:', userId);
         try {
             const teacher = await this.prisma.teacher.findUnique({
                 where: { userId },
                 select: { id: true }
             });
             if (!teacher) {
-                console.log('❌ Teacher not found');
+                return [];
+            }
+            const classExists = await this.prisma.class.findFirst({
+                where: {
+                    id: classId,
+                    teachers: {
+                        some: {
+                            id: teacher.id
+                        }
+                    }
+                }
+            });
+            if (!classExists) {
+                return [];
+            }
+            const students = await this.prisma.student.findMany({
+                where: {
+                    classId: classId
+                },
+                include: {
+                    user: {
+                        select: {
+                            name: true,
+                            username: true
+                        }
+                    },
+                    grades: {
+                        select: {
+                            value: true,
+                            subject: true,
+                            createdAt: true
+                        },
+                        orderBy: {
+                            createdAt: 'desc'
+                        },
+                        take: 5
+                    }
+                },
+                orderBy: {
+                    user: {
+                        name: 'asc'
+                    }
+                }
+            });
+            return students.map(student => ({
+                id: student.id,
+                name: student.user.name,
+                username: student.user.username,
+                gradeCount: student.grades.length,
+                lastGrades: student.grades.map(g => ({
+                    subject: g.subject,
+                    value: g.value,
+                    date: g.createdAt
+                }))
+            }));
+        }
+        catch (error) {
+            return [];
+        }
+    }
+    async getGradesByTeacher(userId) {
+        try {
+            const teacher = await this.prisma.teacher.findUnique({
+                where: { userId },
+                select: { id: true }
+            });
+            if (!teacher) {
                 return [];
             }
             const classes = await this.prisma.class.findMany({
@@ -180,7 +227,6 @@ let TeachersService = class TeachersService {
                 }
             });
             const classIds = classes.map(c => c.id);
-            console.log(`📚 Teacher has ${classIds.length} classes`);
             const grades = await this.prisma.grade.findMany({
                 where: {
                     student: {
@@ -210,7 +256,7 @@ let TeachersService = class TeachersService {
                 },
                 take: 50
             });
-            const result = grades.map(grade => ({
+            return grades.map(grade => ({
                 id: grade.id,
                 studentId: grade.studentId,
                 studentName: grade.student.user.name,
@@ -219,11 +265,8 @@ let TeachersService = class TeachersService {
                 value: grade.value,
                 createdAt: grade.createdAt
             }));
-            console.log(`📊 Returning ${result.length} grades`);
-            return result;
         }
         catch (error) {
-            console.error('❌ Error in getGradesByTeacher:', error);
             return [];
         }
     }
@@ -287,9 +330,135 @@ let TeachersService = class TeachersService {
             }));
         }
         catch (error) {
-            console.error('Error in getScheduleByTeacher:', error);
             return [];
         }
+    }
+    async createGrade(gradeData, userId) {
+        const teacher = await this.prisma.teacher.findUnique({
+            where: { userId },
+            select: { id: true }
+        });
+        if (!teacher) {
+            throw new Error('Teacher not found');
+        }
+        const hasAccess = await this.teacherHasAccessToStudent(userId, gradeData.studentId);
+        if (!hasAccess) {
+            throw new Error('دسترسی غیرمجاز به این دانش‌آموز');
+        }
+        return this.prisma.grade.create({
+            data: {
+                studentId: gradeData.studentId,
+                subject: gradeData.subject,
+                value: gradeData.value
+            }
+        });
+    }
+    async updateGrade(gradeId, gradeData, userId) {
+        const grade = await this.prisma.grade.findUnique({
+            where: { id: gradeId },
+            include: {
+                student: {
+                    include: {
+                        class: {
+                            include: {
+                                teachers: {
+                                    where: { userId },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!grade || grade.student.class.teachers.length === 0) {
+            throw new Error('دسترسی غیرمجاز یا نمره یافت نشد');
+        }
+        return this.prisma.grade.update({
+            where: { id: gradeId },
+            data: {
+                subject: gradeData.subject,
+                value: gradeData.value
+            }
+        });
+    }
+    async deleteGrade(gradeId, userId) {
+        const grade = await this.prisma.grade.findUnique({
+            where: { id: gradeId },
+            include: {
+                student: {
+                    include: {
+                        class: {
+                            include: {
+                                teachers: {
+                                    where: { userId },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!grade || grade.student.class.teachers.length === 0) {
+            throw new Error('دسترسی غیرمجاز یا نمره یافت نشد');
+        }
+        return this.prisma.grade.delete({
+            where: { id: gradeId }
+        });
+    }
+    async sendMessage(messageData, userId) {
+        return this.prisma.message.create({
+            data: {
+                content: messageData.content,
+                fromId: userId,
+                toId: messageData.toId || null,
+                isPublic: messageData.isPublic || false
+            }
+        });
+    }
+    async getMessages(userId) {
+        return this.prisma.message.findMany({
+            where: {
+                OR: [
+                    { fromId: userId },
+                    { toId: userId }
+                ]
+            },
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        name: true,
+                        role: true
+                    }
+                },
+                receiver: {
+                    select: {
+                        id: true,
+                        name: true,
+                        role: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+            take: 50
+        });
+    }
+    async teacherHasAccessToStudent(teacherUserId, studentId) {
+        const student = await this.prisma.student.findUnique({
+            where: { id: studentId },
+            include: {
+                class: {
+                    include: {
+                        teachers: {
+                            where: { userId: teacherUserId },
+                        },
+                    },
+                },
+            },
+        });
+        return student && student.class.teachers.length > 0;
     }
 };
 exports.TeachersService = TeachersService;

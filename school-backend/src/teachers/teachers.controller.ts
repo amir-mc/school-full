@@ -1,5 +1,5 @@
 // backend/src/teachers/teachers.controller.ts
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { TeachersService } from './teachers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -12,24 +12,17 @@ export class TeachersController {
   constructor(private readonly teachersService: TeachersService) {}
 
   private extractUserId(req: any): string {
-    // چندین روش ممکن برای دریافت user ID
-    console.log('Request user object:', req.user);
-    console.log('Request user keys:', Object.keys(req.user));
-    
-    // روش‌های مختلف برای یافتن user ID
+    // بررسی چندین مکان ممکن برای userId
     const userId = 
-      req.user?.id ||           // روش ۱: مستقیم
-      req.user?.sub ||          // روش ۲: از JWT payload
-      req.user?.userId ||       // روش ۳: نام متغیر متفاوت
-      req.user?.user?.id ||     // روش ۴: تو در تو
-      req.user?.user_id;        // روش ۵: snake_case
-    
-    console.log('Extracted userId:', userId);
-    
+      req.user?.id ||           // روش اصلی
+      req.user?.sub ||          // از JWT payload
+      req.user?.userId ||       // نام متغیر جایگزین
+      req.user?.user?.id;       // اگر تو در تو بود
+
     if (!userId) {
-      throw new Error(`User ID not found in token. Available keys: ${JSON.stringify(req.user)}`);
+      throw new Error('User ID not found in request');
     }
-    
+
     return userId;
   }
 
@@ -62,5 +55,35 @@ export class TeachersController {
   async getMySchedule(@Req() req: any) {
     const userId = this.extractUserId(req);
     return this.teachersService.getScheduleByTeacher(userId);
+  }
+
+  @Post('grades')
+  async createGrade(@Body() gradeData: any, @Req() req: any) {
+    const userId = this.extractUserId(req);
+    return this.teachersService.createGrade(gradeData, userId);
+  }
+
+  @Put('grades/:id')
+  async updateGrade(@Param('id') gradeId: string, @Body() gradeData: any, @Req() req: any) {
+    const userId = this.extractUserId(req);
+    return this.teachersService.updateGrade(gradeId, gradeData, userId);
+  }
+
+  @Delete('grades/:id')
+  async deleteGrade(@Param('id') gradeId: string, @Req() req: any) {
+    const userId = this.extractUserId(req);
+    return this.teachersService.deleteGrade(gradeId, userId);
+  }
+
+  @Get('messages')
+  async getMessages(@Req() req: any) {
+    const userId = this.extractUserId(req);
+    return this.teachersService.getMessages(userId);
+  }
+
+  @Post('messages')
+  async sendMessage(@Body() messageData: any, @Req() req: any) {
+    const userId = this.extractUserId(req);
+    return this.teachersService.sendMessage(messageData, userId);
   }
 }

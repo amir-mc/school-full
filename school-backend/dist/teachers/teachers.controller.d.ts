@@ -25,7 +25,17 @@ export declare class TeachersController {
         scheduleCount: number;
         hasSchedule: boolean;
     }[]>;
-    getClassStudents(req: any): Promise<never[]>;
+    getClassStudents(req: any): Promise<{
+        id: string;
+        name: string;
+        username: string;
+        gradeCount: number;
+        lastGrades: {
+            subject: string;
+            value: number;
+            date: Date;
+        }[];
+    }[]>;
     getMyGrades(req: any): Promise<{
         id: string;
         studentId: string;
@@ -39,4 +49,54 @@ export declare class TeachersController {
         day: string;
         schedules: any[];
     }[]>;
+    createGrade(gradeData: any, req: any): Promise<{
+        id: string;
+        createdAt: Date;
+        studentId: string;
+        subject: string;
+        value: number;
+    }>;
+    updateGrade(gradeId: string, gradeData: any, req: any): Promise<{
+        id: string;
+        createdAt: Date;
+        studentId: string;
+        subject: string;
+        value: number;
+    }>;
+    deleteGrade(gradeId: string, req: any): Promise<{
+        id: string;
+        createdAt: Date;
+        studentId: string;
+        subject: string;
+        value: number;
+    }>;
+    getMessages(req: any): Promise<({
+        sender: {
+            id: string;
+            name: string;
+            role: import("generated/prisma").$Enums.Role;
+        };
+        receiver: {
+            id: string;
+            name: string;
+            role: import("generated/prisma").$Enums.Role;
+        } | null;
+    } & {
+        id: string;
+        createdAt: Date;
+        content: string;
+        fromId: string;
+        toId: string | null;
+        isPublic: boolean;
+        isRead: boolean;
+    })[]>;
+    sendMessage(messageData: any, req: any): Promise<{
+        id: string;
+        createdAt: Date;
+        content: string;
+        fromId: string;
+        toId: string | null;
+        isPublic: boolean;
+        isRead: boolean;
+    }>;
 }

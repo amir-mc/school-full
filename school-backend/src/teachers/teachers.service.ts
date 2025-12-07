@@ -8,19 +8,13 @@ export class TeachersService {
 
   // آمار داشبورد
   async getDashboardStats(userId: string) {
-    console.log('📊 getDashboardStats called with userId:', userId);
-    
     try {
-      // ابتدا ببینیم کاربر اصلاً وجود دارد
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { id: true, name: true, role: true }
       });
 
-      console.log('Found user:', user);
-
       if (!user) {
-        console.log('❌ User not found in database');
         return {
           teacherName: 'کاربر یافت نشد',
           activeClasses: 0,
@@ -31,16 +25,12 @@ export class TeachersService {
         };
       }
 
-      // بررسی کنیم که آیا این کاربر واقعاً یک معلم است
       const teacher = await this.prisma.teacher.findUnique({
         where: { userId },
         select: { id: true }
       });
 
-      console.log('Found teacher record:', teacher);
-
       if (!teacher) {
-        console.log('⚠️ User is not registered as a teacher');
         return {
           teacherName: user.name,
           activeClasses: 0,
@@ -51,7 +41,6 @@ export class TeachersService {
         };
       }
 
-      // کلاس‌های معلم
       const classes = await this.prisma.class.findMany({
         where: {
           teachers: {
@@ -71,20 +60,13 @@ export class TeachersService {
         }
       });
 
-      console.log(`📚 Found ${classes.length} classes for teacher`);
-
-      // دانش‌آموزان همه کلاس‌ها
       const totalStudents = classes.reduce((sum, cls) => sum + cls.students.length, 0);
-
-      // نمرات معلم
       const grades = await this.getGradesByTeacher(userId);
       
-      // محاسبه میانگین
       const averageGrade = grades.length > 0 
         ? grades.reduce((sum, grade) => sum + grade.value, 0) / grades.length 
         : 0;
 
-      // ۵ نمره آخر
       const recentGrades = grades.slice(0, 5).map(grade => ({
         id: grade.id,
         studentName: grade.studentName,
@@ -93,7 +75,7 @@ export class TeachersService {
         date: grade.createdAt
       }));
 
-      const result = {
+      return {
         teacherName: user.name,
         activeClasses: classes.length,
         totalStudents,
@@ -102,32 +84,23 @@ export class TeachersService {
         recentGrades
       };
 
-      console.log('📈 Dashboard stats result:', result);
-      return result;
-
     } catch (error) {
-      console.error('❌ Error in getDashboardStats:', error);
       throw error;
     }
   }
 
   // کلاس‌های معلم
   async getClassesByTeacherUserId(userId: string) {
-    console.log('🏫 getClassesByTeacherUserId called with userId:', userId);
-    
     try {
-      // پیدا کردن معلم
       const teacher = await this.prisma.teacher.findUnique({
         where: { userId },
         select: { id: true }
       });
 
       if (!teacher) {
-        console.log('❌ Teacher not found');
         return [];
       }
 
-      // کلاس‌های این معلم
       const classes = await this.prisma.class.findMany({
         where: {
           teachers: {
@@ -155,7 +128,7 @@ export class TeachersService {
         }
       });
 
-      const result = classes.map(cls => ({
+      return classes.map(cls => ({
         id: cls.id,
         name: cls.name,
         grade: cls.grade,
@@ -164,40 +137,96 @@ export class TeachersService {
         hasSchedule: cls.schedules.length > 0
       }));
 
-      console.log(`📚 Returning ${result.length} classes`);
-      return result;
-
     } catch (error) {
-      console.error('❌ Error in getClassesByTeacherUserId:', error);
       return [];
     }
   }
 
-  // بقیه متدها به همان شکل قبلی باقی می‌مانند...
-  // فقط console.log برای دیباگ اضافه می‌کنیم
-
+  // دانش‌آموزان یک کلاس خاص
   async getClassStudents(classId: string, userId: string) {
-    console.log('👨‍🎓 getClassStudents called:', { classId, userId });
-    // بقیه کد همان...
-    return [];
-  }
-
-  async getGradesByTeacher(userId: string) {
-    console.log('📝 getGradesByTeacher called with userId:', userId);
-    
     try {
-      // پیدا کردن معلم
       const teacher = await this.prisma.teacher.findUnique({
         where: { userId },
         select: { id: true }
       });
 
       if (!teacher) {
-        console.log('❌ Teacher not found');
         return [];
       }
 
-      // کلاس‌های این معلم
+      const classExists = await this.prisma.class.findFirst({
+        where: {
+          id: classId,
+          teachers: {
+            some: {
+              id: teacher.id
+            }
+          }
+        }
+      });
+
+      if (!classExists) {
+        return [];
+      }
+
+      const students = await this.prisma.student.findMany({
+        where: {
+          classId: classId
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+              username: true
+            }
+          },
+          grades: {
+            select: {
+              value: true,
+              subject: true,
+              createdAt: true
+            },
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 5
+          }
+        },
+        orderBy: {
+          user: {
+            name: 'asc'
+          }
+        }
+      });
+
+      return students.map(student => ({
+        id: student.id,
+        name: student.user.name,
+        username: student.user.username,
+        gradeCount: student.grades.length,
+        lastGrades: student.grades.map(g => ({
+          subject: g.subject,
+          value: g.value,
+          date: g.createdAt
+        }))
+      }));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  // نمرات معلم
+  async getGradesByTeacher(userId: string) {
+    try {
+      const teacher = await this.prisma.teacher.findUnique({
+        where: { userId },
+        select: { id: true }
+      });
+
+      if (!teacher) {
+        return [];
+      }
+
       const classes = await this.prisma.class.findMany({
         where: {
           teachers: {
@@ -212,9 +241,7 @@ export class TeachersService {
       });
 
       const classIds = classes.map(c => c.id);
-      console.log(`📚 Teacher has ${classIds.length} classes`);
 
-      // نمرات دانش‌آموزان این کلاس‌ها
       const grades = await this.prisma.grade.findMany({
         where: {
           student: {
@@ -245,7 +272,7 @@ export class TeachersService {
         take: 50
       });
 
-      const result = grades.map(grade => ({
+      return grades.map(grade => ({
         id: grade.id,
         studentId: grade.studentId,
         studentName: grade.student.user.name,
@@ -255,11 +282,7 @@ export class TeachersService {
         createdAt: grade.createdAt
       }));
 
-      console.log(`📊 Returning ${result.length} grades`);
-      return result;
-
     } catch (error) {
-      console.error('❌ Error in getGradesByTeacher:', error);
       return [];
     }
   }
@@ -267,7 +290,6 @@ export class TeachersService {
   // برنامه درسی معلم
   async getScheduleByTeacher(userId: string) {
     try {
-      // پیدا کردن معلم
       const teacher = await this.prisma.teacher.findUnique({
         where: { userId },
         select: { id: true }
@@ -277,7 +299,6 @@ export class TeachersService {
         return [];
       }
 
-      // کلاس‌های این معلم
       const classes = await this.prisma.class.findMany({
         where: {
           teachers: {
@@ -294,7 +315,6 @@ export class TeachersService {
 
       const classIds = classes.map(c => c.id);
 
-      // برنامه درسی این کلاس‌ها
       const schedules = await this.prisma.schedule.findMany({
         where: {
           classId: {
@@ -314,7 +334,6 @@ export class TeachersService {
         ]
       });
 
-      // گروه‌بندی بر اساس روز
       const groupedByDay: Record<string, any[]> = {};
       
       schedules.forEach(schedule => {
@@ -331,14 +350,159 @@ export class TeachersService {
         });
       });
 
-      // تبدیل به آرایه
       return Object.entries(groupedByDay).map(([day, schedules]) => ({
         day,
         schedules
       }));
     } catch (error) {
-      console.error('Error in getScheduleByTeacher:', error);
       return [];
     }
+  }
+
+  // ثبت نمره جدید
+  async createGrade(gradeData: any, userId: string) {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true }
+    });
+
+    if (!teacher) {
+      throw new Error('Teacher not found');
+    }
+
+    const hasAccess = await this.teacherHasAccessToStudent(userId, gradeData.studentId);
+    if (!hasAccess) {
+      throw new Error('دسترسی غیرمجاز به این دانش‌آموز');
+    }
+
+    return this.prisma.grade.create({
+      data: {
+        studentId: gradeData.studentId,
+        subject: gradeData.subject,
+        value: gradeData.value
+      }
+    });
+  }
+
+  // ویرایش نمره
+  async updateGrade(gradeId: string, gradeData: any, userId: string) {
+    const grade = await this.prisma.grade.findUnique({
+      where: { id: gradeId },
+      include: {
+        student: {
+          include: {
+            class: {
+              include: {
+                teachers: {
+                  where: { userId },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!grade || grade.student.class.teachers.length === 0) {
+      throw new Error('دسترسی غیرمجاز یا نمره یافت نشد');
+    }
+
+    return this.prisma.grade.update({
+      where: { id: gradeId },
+      data: {
+        subject: gradeData.subject,
+        value: gradeData.value
+      }
+    });
+  }
+
+  // حذف نمره
+  async deleteGrade(gradeId: string, userId: string) {
+    const grade = await this.prisma.grade.findUnique({
+      where: { id: gradeId },
+      include: {
+        student: {
+          include: {
+            class: {
+              include: {
+                teachers: {
+                  where: { userId },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!grade || grade.student.class.teachers.length === 0) {
+      throw new Error('دسترسی غیرمجاز یا نمره یافت نشد');
+    }
+
+    return this.prisma.grade.delete({
+      where: { id: gradeId }
+    });
+  }
+
+  // ارسال پیام
+  async sendMessage(messageData: any, userId: string) {
+    return this.prisma.message.create({
+      data: {
+        content: messageData.content,
+        fromId: userId,
+        toId: messageData.toId || null,
+        isPublic: messageData.isPublic || false
+      }
+    });
+  }
+
+  // دریافت پیام‌های معلم
+  async getMessages(userId: string) {
+    return this.prisma.message.findMany({
+      where: {
+        OR: [
+          { fromId: userId },
+          { toId: userId }
+        ]
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            role: true
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            role: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 50
+    });
+  }
+
+  // بررسی دسترسی معلم به دانش‌آموز
+  private async teacherHasAccessToStudent(teacherUserId: string, studentId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        class: {
+          include: {
+            teachers: {
+              where: { userId: teacherUserId },
+            },
+          },
+        },
+      },
+    });
+
+    return student && student.class.teachers.length > 0;
   }
 }
