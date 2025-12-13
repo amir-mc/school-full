@@ -1,0 +1,370 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { teacherService } from '@/services/teacherService';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import ClassHeader from './components/ClassHeader';
+import ClassStats from './components/ClassStats';
+import ClassTabs from './components/ClassTabs';
+import OverviewTab from './components/OverviewTab';
+import StudentsTab from './components/StudentsTab';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+interface Student {
+  id: string;
+  name: string;
+  username: string;
+  studentCode: string; // اضافه کردن
+  gradeCount: number;
+  lastGrades: Array<{
+    subject: string;
+    value: number;
+    date: string;
+  }>;
+  averageGrade: number; // اضافه کردن
+}
+interface Grade {
+  id: string;
+  studentId: string;
+  studentName: string;
+  subject: string;
+  value: number;
+  date: string;
+}
+
+interface Schedule {
+  day: string;
+  startTime: string;
+  endTime: string;
+  subject: string;
+}
+
+interface ClassDetails {
+  id: string;
+  name: string;
+  grade: number;
+  totalStudents: number;
+  averageClassGrade: number;
+  totalGrades: number;
+  students: Student[];
+  topStudents: Student[];
+  recentGrades: Grade[];
+  schedule: Schedule[];
+  upcomingSchedule?: {
+    day: string;
+    time: string;
+    subject: string;
+  };
+}
+
+export default function ClassDetailsPage() {
+  const params = useParams();
+  const router = useRouter();
+  const classId = params.id as string;
+  
+  const [classDetails, setClassDetails] = useState<ClassDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  useEffect(() => {
+    if (classId) {
+      fetchClassDetails();
+    }
+  }, [classId]);
+
+ const fetchClassDetails = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    // 1. دریافت اطلاعات پایه کلاس
+    const classes = await teacherService.getMyClasses();
+    const currentClass = classes.find((cls: any) => cls.id === classId);
+    
+    if (!currentClass) {
+      throw new Error('کلاس مورد نظر یافت نشد یا دسترسی ندارید');
+    }
+
+    // 2. دریافت دانش‌آموزان کلاس
+    const students = await teacherService.getClassStudents(classId);
+    
+    // 3. دریافت همه نمرات معلم و فیلتر کردن
+    const allGrades = await teacherService.getMyGrades();
+    const classGrades = allGrades.filter((grade: any) => 
+      students.some((student: any) => student.id === grade.studentId)
+    ).map((grade: any) => ({
+      id: grade.id,
+      studentId: grade.studentId,
+      studentName: grade.studentName || students.find((s: any) => s.id === grade.studentId)?.name || 'نامشخص',
+      subject: grade.subject,
+      value: grade.value,
+      date: grade.createdAt || grade.date
+    }));
+    
+    // 4. دریافت برنامه کلاس
+    const schedule = await getClassSchedule(classId);
+
+    // محاسبه آمار
+    const averageClassGrade = calculateAverageGrade(classGrades);
+    const topStudents = calculateTopStudents(students, classGrades);
+    const recentGrades = getRecentGrades(classGrades);
+    const upcomingSchedule = getUpcomingSchedule(schedule);
+
+    // ساخت آبجکت کامل
+    const classDetailsData: ClassDetails = {
+      id: classId,
+      name: currentClass.name,
+      grade: currentClass.grade,
+      totalStudents: students.length,
+      averageClassGrade,
+      totalGrades: classGrades.length,
+      students,
+      topStudents,
+      recentGrades,
+      schedule,
+      upcomingSchedule
+    };
+
+    setClassDetails(classDetailsData);
+    
+  } catch (err: any) {
+    console.error('Error fetching class details:', err);
+    setError(err.message || 'خطا در بارگذاری جزئیات کلاس');
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // تابع کمکی: محاسبه میانگین نمرات
+  const calculateAverageGrade = (grades: Grade[]): number => {
+    if (grades.length === 0) return 0;
+    const sum = grades.reduce((total, grade) => total + grade.value, 0);
+    return parseFloat((sum / grades.length).toFixed(1));
+  };
+
+  // تابع کمکی: محاسبه دانش‌آموزان برتر
+const calculateTopStudents = (students: Student[], grades: Grade[]): Array<{
+  id: string;
+  name: string;
+  studentCode?: string;
+  averageGrade: number;
+}> => {
+  // محاسبه میانگین نمرات برای هر دانش‌آموز
+  const studentsWithAvg = students.map(student => {
+    const studentGrades = grades.filter(grade => grade.studentId === student.id);
+    const averageGrade = studentGrades.length > 0 
+      ? studentGrades.reduce((sum, grade) => sum + grade.value, 0) / studentGrades.length
+      : 0;
+    
+    return {
+      ...student,
+      averageGrade
+    };
+  });
+  
+  return studentsWithAvg
+    .sort((a, b) => b.averageGrade - a.averageGrade)
+    .slice(0, 3)
+    .map(student => ({
+      id: student.id,
+      name: student.name,
+      studentCode: student.username,
+      averageGrade: student.averageGrade
+    }));
+};
+
+  // تابع کمکی: دریافت نمرات اخیر
+  const getRecentGrades = (grades: Grade[]): Grade[] => {
+    return [...grades]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  };
+
+  // تابع کمکی: دریافت برنامه کلاس
+  const getClassSchedule = async (classId: string): Promise<Schedule[]> => {
+    try {
+      const allSchedule = await teacherService.getMySchedule();
+      const classSchedule = allSchedule.flatMap((daySchedule: any) => 
+        daySchedule.schedules.filter((schedule: any) => 
+          schedule.classId === classId || schedule.className?.includes(classId)
+        ).map((schedule: any) => ({
+          day: daySchedule.day,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          subject: schedule.subject
+        }))
+      );
+      return classSchedule;
+    } catch (error) {
+      console.error('Error fetching schedule:', error);
+      return [];
+    }
+  };
+
+  // تابع کمکی: دریافت کلاس بعدی
+  const getUpcomingSchedule = (schedule: Schedule[]): { day: string; time: string; subject: string } | undefined => {
+    if (schedule.length === 0) return undefined;
+    
+    // برای سادگی، اولین آیتم رو برمی‌گردانیم
+    const nextSession = schedule[0];
+    return {
+      day: nextSession.day,
+      time: `${nextSession.startTime} - ${nextSession.endTime}`,
+      subject: nextSession.subject
+    };
+  };
+
+  const handleAddGrade = () => {
+    router.push(`/teacher/classes/${classId}/add-grade`);
+  };
+
+  const handleMessageParents = () => {
+    // ارسال پیام به والدین
+    alert('ویژگی ارسال پیام به والدین به زودی اضافه خواهد شد');
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  if (error || !classDetails) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-center">
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error || 'کلاس مورد نظر یافت نشد'}</AlertDescription>
+          </Alert>
+          <Button onClick={fetchClassDetails}>تلاش مجدد</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // تعریف تب‌ها
+  const tabs = [
+    {
+      value: 'overview',
+      label: 'نمای کلی',
+      content: (
+        <OverviewTab
+          classId={classId}
+          topStudents={classDetails.topStudents}
+          schedule={classDetails.schedule}
+          recentGrades={classDetails.recentGrades}
+        />
+      )
+    },
+    {
+      value: 'students',
+      label: 'دانش‌آموزان',
+      content: (
+        <StudentsTab
+          classId={classId}
+          students={classDetails.students}
+        />
+      )
+    },
+    {
+      value: 'grades',
+      label: 'نمرات',
+      content: (
+        <GradesTab
+          classId={classId}
+          grades={classDetails.recentGrades}
+          totalGrades={classDetails.totalGrades}
+        />
+      )
+    },
+    {
+      value: 'schedule',
+      label: 'برنامه',
+      content: (
+        <ScheduleTab schedule={classDetails.schedule} />
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* هدر */}
+      <ClassHeader
+        classData={classDetails}
+        onAddGrade={handleAddGrade}
+        onMessageParents={handleMessageParents}
+      />
+
+      {/* آمار کلاس */}
+      <ClassStats
+        averageClassGrade={classDetails.averageClassGrade}
+        totalStudents={classDetails.totalStudents}
+        totalGrades={classDetails.totalGrades}
+        upcomingSchedule={classDetails.upcomingSchedule}
+      />
+
+      {/* تب‌های اصلی */}
+      <ClassTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={tabs}
+      />
+    </div>
+  );
+}
+
+// کامپوننت‌های ساده برای GradesTab و ScheduleTab
+function GradesTab({ classId, grades, totalGrades }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>نمرات کلاس</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-gray-600 mb-4">
+          کلاس دارای {totalGrades} نمره ثبت شده است.
+        </p>
+        {/* می‌توانید این بخش رو کامل‌تر کنید */}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScheduleTab({ schedule }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>برنامه هفتگی کلاس</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {schedule.map((session: any, index: number) => (
+            <div key={index} className="p-3 rounded-lg border">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{session.subject}</span>
+                <span className="text-gray-600">{session.day}</span>
+              </div>
+              <div className="text-sm text-gray-500 mt-1">
+                {session.startTime} - {session.endTime}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

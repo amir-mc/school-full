@@ -99,4 +99,12 @@ export declare class TeachersService {
         isRead: boolean;
     })[]>;
     private teacherHasAccessToStudent;
+    getClassGrades(classId: string, userId: string): Promise<{
+        id: string;
+        studentId: string;
+        studentName: string;
+        subject: string;
+        value: number;
+        date: Date;
+    }[]>;
 }

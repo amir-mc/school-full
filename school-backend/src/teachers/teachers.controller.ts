@@ -86,4 +86,9 @@ export class TeachersController {
     const userId = this.extractUserId(req);
     return this.teachersService.sendMessage(messageData, userId);
   }
+  @Get('classes/:id/grades')
+async getClassGrades(@Param('id') classId: string, @Req() req: any) {
+  const userId = this.extractUserId(req);
+  return this.teachersService.getClassGrades(classId, userId);
+}
 }

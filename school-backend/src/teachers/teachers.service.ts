@@ -505,4 +505,82 @@ export class TeachersService {
 
     return student && student.class.teachers.length > 0;
   }
+
+  // در TeachersService
+async getClassGrades(classId: string, userId: string) {
+  try {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true }
+    });
+
+    if (!teacher) {
+      return [];
+    }
+
+    // بررسی دسترسی معلم به کلاس
+    const hasAccess = await this.prisma.class.findFirst({
+      where: {
+        id: classId,
+        teachers: {
+          some: {
+            id: teacher.id
+          }
+        }
+      }
+    });
+
+    if (!hasAccess) {
+      return [];
+    }
+
+    // دریافت دانش‌آموزان کلاس
+    const students = await this.prisma.student.findMany({
+      where: {
+        classId: classId
+      },
+      select: {
+        id: true
+      }
+    });
+
+    const studentIds = students.map(s => s.id);
+
+    // دریافت نمرات دانش‌آموزان این کلاس
+    const grades = await this.prisma.grade.findMany({
+      where: {
+        studentId: {
+          in: studentIds
+        }
+      },
+      include: {
+        student: {
+          include: {
+            user: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return grades.map(grade => ({
+      id: grade.id,
+      studentId: grade.studentId,
+      studentName: grade.student.user.name,
+      subject: grade.subject,
+      value: grade.value,
+      date: grade.createdAt
+    }));
+
+  } catch (error) {
+    console.error('Error fetching class grades:', error);
+    return [];
+  }
+}
 }

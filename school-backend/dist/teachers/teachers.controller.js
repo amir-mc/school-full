@@ -74,6 +74,10 @@ let TeachersController = class TeachersController {
         const userId = this.extractUserId(req);
         return this.teachersService.sendMessage(messageData, userId);
     }
+    async getClassGrades(classId, req) {
+        const userId = this.extractUserId(req);
+        return this.teachersService.getClassGrades(classId, userId);
+    }
 };
 exports.TeachersController = TeachersController;
 __decorate([
@@ -151,6 +155,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], TeachersController.prototype, "sendMessage", null);
+__decorate([
+    (0, common_1.Get)('classes/:id/grades'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], TeachersController.prototype, "getClassGrades", null);
 exports.TeachersController = TeachersController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('TEACHER'),

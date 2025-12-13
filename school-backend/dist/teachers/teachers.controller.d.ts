@@ -99,4 +99,12 @@ export declare class TeachersController {
         isPublic: boolean;
         isRead: boolean;
     }>;
+    getClassGrades(classId: string, req: any): Promise<{
+        id: string;
+        studentId: string;
+        studentName: string;
+        subject: string;
+        value: number;
+        date: Date;
+    }[]>;
 }

@@ -460,6 +460,72 @@ let TeachersService = class TeachersService {
         });
         return student && student.class.teachers.length > 0;
     }
+    async getClassGrades(classId, userId) {
+        try {
+            const teacher = await this.prisma.teacher.findUnique({
+                where: { userId },
+                select: { id: true }
+            });
+            if (!teacher) {
+                return [];
+            }
+            const hasAccess = await this.prisma.class.findFirst({
+                where: {
+                    id: classId,
+                    teachers: {
+                        some: {
+                            id: teacher.id
+                        }
+                    }
+                }
+            });
+            if (!hasAccess) {
+                return [];
+            }
+            const students = await this.prisma.student.findMany({
+                where: {
+                    classId: classId
+                },
+                select: {
+                    id: true
+                }
+            });
+            const studentIds = students.map(s => s.id);
+            const grades = await this.prisma.grade.findMany({
+                where: {
+                    studentId: {
+                        in: studentIds
+                    }
+                },
+                include: {
+                    student: {
+                        include: {
+                            user: {
+                                select: {
+                                    name: true
+                                }
+                            }
+                        }
+                    }
+                },
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
+            return grades.map(grade => ({
+                id: grade.id,
+                studentId: grade.studentId,
+                studentName: grade.student.user.name,
+                subject: grade.subject,
+                value: grade.value,
+                date: grade.createdAt
+            }));
+        }
+        catch (error) {
+            console.error('Error fetching class grades:', error);
+            return [];
+        }
+    }
 };
 exports.TeachersService = TeachersService;
 exports.TeachersService = TeachersService = __decorate([
