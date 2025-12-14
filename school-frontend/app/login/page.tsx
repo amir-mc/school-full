@@ -265,7 +265,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute left-3 top-3 text-gray-500 hover:text-gray-700"
+                      className=" absolute right-3 top-3 text-gray-500 hover:text-gray-700"
                       disabled={loading}
                     >
                       {showPassword ? (
@@ -310,12 +310,13 @@ export default function LoginPage() {
               {/* اطلاعات دیباگ (فقط در توسعه) */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-xs text-gray-500 space-y-1">
+                  <span>DEV TOOLS </span>
                   <p><strong>توکن فعلی در localStorage:</strong></p>
                   <p className="truncate">
                     {localStorage.getItem('token')?.substring(0, 50)}...
                   </p>
                   <p><strong>کاربر فعلی:</strong></p>
-                  <p>{localStorage.getItem('user') || 'هیچ کاربری'}</p>
+                  <p>{localStorage.getItem('user') || ''}</p>
                 </div>
               )}
             </form>
@@ -324,7 +325,7 @@ export default function LoginPage() {
 
         {/* فوتر */}
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>© {new Date().getFullYear()} سیستم مدیریت مدرسه</p>
+          <p>© {new Date().getFullYear()}  سیستم مدیریت مدرسه زادمهر تابنده</p>
           <p className="mt-1">نسخه ۱.۰.۰</p>
         </div>
       </div>

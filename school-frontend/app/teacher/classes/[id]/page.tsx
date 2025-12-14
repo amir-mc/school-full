@@ -18,15 +18,16 @@ interface Student {
   id: string;
   name: string;
   username: string;
-  studentCode: string; // اضافه کردن
+  studentCode: string;
   gradeCount: number;
   lastGrades: Array<{
     subject: string;
     value: number;
     date: string;
   }>;
-  averageGrade: number; // اضافه کردن
+  averageGrade: number;
 }
+
 interface Grade {
   id: string;
   studentId: string;
@@ -77,106 +78,109 @@ export default function ClassDetailsPage() {
     }
   }, [classId]);
 
- const fetchClassDetails = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    
-    // 1. دریافت اطلاعات پایه کلاس
-    const classes = await teacherService.getMyClasses();
-    const currentClass = classes.find((cls: any) => cls.id === classId);
-    
-    if (!currentClass) {
-      throw new Error('کلاس مورد نظر یافت نشد یا دسترسی ندارید');
+  const fetchClassDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // 1. دریافت اطلاعات پایه کلاس
+      const classes = await teacherService.getMyClasses();
+      const currentClass = classes.find((cls: any) => cls.id === classId);
+      
+      if (!currentClass) {
+        throw new Error('کلاس مورد نظر یافت نشد یا دسترسی ندارید');
+      }
+
+      // 2. دریافت دانش‌آموزان کلاس
+      const rawStudents = await teacherService.getClassStudents(classId);
+      
+      // 3. دریافت همه نمرات معلم و فیلتر کردن
+      const allGrades = await teacherService.getMyGrades();
+      const classGrades: Grade[] = allGrades
+        .filter((grade: any) => 
+          rawStudents.some((student: any) => student.id === grade.studentId)
+        )
+        .map((grade: any) => ({
+          id: grade.id,
+          studentId: grade.studentId,
+          studentName: grade.studentName || 
+                       rawStudents.find((s: any) => s.id === grade.studentId)?.name || 
+                       'نامشخص',
+          subject: grade.subject,
+          value: grade.value,
+          date: grade.createdAt || grade.date || new Date().toISOString()
+        }));
+      
+      // 4. دریافت برنامه کلاس
+      const schedule = await getClassSchedule(classId);
+
+      // تبدیل rawStudents به Student[] با تمام فیلدهای مورد نیاز
+      const students: Student[] = rawStudents.map((rawStudent: any) => {
+        const studentGrades = classGrades.filter(grade => grade.studentId === rawStudent.id);
+        
+        // محاسبه میانگین نمرات دانش‌آموز
+        const averageGrade = studentGrades.length > 0
+          ? parseFloat((studentGrades.reduce((sum, grade) => sum + grade.value, 0) / studentGrades.length).toFixed(1))
+          : 0;
+
+        return {
+          id: rawStudent.id,
+          name: rawStudent.name || rawStudent.fullName || 'بدون نام',
+          username: rawStudent.username || rawStudent.email?.split('@')[0] || `user_${rawStudent.id}`,
+          studentCode: rawStudent.studentCode || rawStudent.code || rawStudent.id.slice(0, 8),
+          gradeCount: studentGrades.length,
+          lastGrades: studentGrades
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 3)
+            .map(grade => ({
+              subject: grade.subject,
+              value: grade.value,
+              date: grade.date
+            })),
+          averageGrade
+        };
+      });
+
+      // محاسبه میانگین کل کلاس
+      const averageClassGrade = classGrades.length > 0
+        ? parseFloat((classGrades.reduce((sum, grade) => sum + grade.value, 0) / classGrades.length).toFixed(1))
+        : 0;
+
+      // انتخاب دانش‌آموزان برتر (بر اساس میانگین نمره)
+      const topStudents = [...students]
+        .sort((a, b) => b.averageGrade - a.averageGrade)
+        .slice(0, 3);
+
+      // دریافت نمرات اخیر
+      const recentGrades = getRecentGrades(classGrades);
+      
+      // دریافت برنامه آتی
+      const upcomingSchedule = getUpcomingSchedule(schedule);
+
+      // ساخت آبجکت کامل
+      const classDetailsData: ClassDetails = {
+        id: classId,
+        name: currentClass.name,
+        grade: currentClass.grade || 0,
+        totalStudents: students.length,
+        averageClassGrade,
+        totalGrades: classGrades.length,
+        students,
+        topStudents,
+        recentGrades,
+        schedule,
+        upcomingSchedule
+      };
+
+      setClassDetails(classDetailsData);
+      
+    } catch (err: any) {
+      console.error('Error fetching class details:', err);
+      setError(err.message || 'خطا در بارگذاری جزئیات کلاس');
+    } finally {
+      setLoading(false);
     }
-
-    // 2. دریافت دانش‌آموزان کلاس
-    const students = await teacherService.getClassStudents(classId);
-    
-    // 3. دریافت همه نمرات معلم و فیلتر کردن
-    const allGrades = await teacherService.getMyGrades();
-    const classGrades = allGrades.filter((grade: any) => 
-      students.some((student: any) => student.id === grade.studentId)
-    ).map((grade: any) => ({
-      id: grade.id,
-      studentId: grade.studentId,
-      studentName: grade.studentName || students.find((s: any) => s.id === grade.studentId)?.name || 'نامشخص',
-      subject: grade.subject,
-      value: grade.value,
-      date: grade.createdAt || grade.date
-    }));
-    
-    // 4. دریافت برنامه کلاس
-    const schedule = await getClassSchedule(classId);
-
-    // محاسبه آمار
-    const averageClassGrade = calculateAverageGrade(classGrades);
-    const topStudents = calculateTopStudents(students, classGrades);
-    const recentGrades = getRecentGrades(classGrades);
-    const upcomingSchedule = getUpcomingSchedule(schedule);
-
-    // ساخت آبجکت کامل
-    const classDetailsData: ClassDetails = {
-      id: classId,
-      name: currentClass.name,
-      grade: currentClass.grade,
-      totalStudents: students.length,
-      averageClassGrade,
-      totalGrades: classGrades.length,
-      students,
-      topStudents,
-      recentGrades,
-      schedule,
-      upcomingSchedule
-    };
-
-    setClassDetails(classDetailsData);
-    
-  } catch (err: any) {
-    console.error('Error fetching class details:', err);
-    setError(err.message || 'خطا در بارگذاری جزئیات کلاس');
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // تابع کمکی: محاسبه میانگین نمرات
-  const calculateAverageGrade = (grades: Grade[]): number => {
-    if (grades.length === 0) return 0;
-    const sum = grades.reduce((total, grade) => total + grade.value, 0);
-    return parseFloat((sum / grades.length).toFixed(1));
   };
-
-  // تابع کمکی: محاسبه دانش‌آموزان برتر
-const calculateTopStudents = (students: Student[], grades: Grade[]): Array<{
-  id: string;
-  name: string;
-  studentCode?: string;
-  averageGrade: number;
-}> => {
-  // محاسبه میانگین نمرات برای هر دانش‌آموز
-  const studentsWithAvg = students.map(student => {
-    const studentGrades = grades.filter(grade => grade.studentId === student.id);
-    const averageGrade = studentGrades.length > 0 
-      ? studentGrades.reduce((sum, grade) => sum + grade.value, 0) / studentGrades.length
-      : 0;
-    
-    return {
-      ...student,
-      averageGrade
-    };
-  });
-  
-  return studentsWithAvg
-    .sort((a, b) => b.averageGrade - a.averageGrade)
-    .slice(0, 3)
-    .map(student => ({
-      id: student.id,
-      name: student.name,
-      studentCode: student.username,
-      averageGrade: student.averageGrade
-    }));
-};
 
   // تابع کمکی: دریافت نمرات اخیر
   const getRecentGrades = (grades: Grade[]): Grade[] => {
@@ -210,12 +214,43 @@ const calculateTopStudents = (students: Student[], grades: Grade[]): Array<{
   const getUpcomingSchedule = (schedule: Schedule[]): { day: string; time: string; subject: string } | undefined => {
     if (schedule.length === 0) return undefined;
     
-    // برای سادگی، اولین آیتم رو برمی‌گردانیم
-    const nextSession = schedule[0];
+    const daysOrder = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
+    const today = new Date().toLocaleDateString('fa-IR', { weekday: 'long' });
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    // مرتب کردن برنامه‌ها بر اساس روز و زمان
+    const sortedSchedule = [...schedule].sort((a, b) => {
+      const dayDiff = daysOrder.indexOf(a.day) - daysOrder.indexOf(b.day);
+      if (dayDiff !== 0) return dayDiff;
+      
+      const [aHour, aMinute] = a.startTime.split(':').map(Number);
+      const [bHour, bMinute] = b.startTime.split(':').map(Number);
+      return (aHour * 60 + aMinute) - (bHour * 60 + bMinute);
+    });
+
+    // یافتن اولین کلاس بعدی
+    for (const session of sortedSchedule) {
+      const [startHour, startMinute] = session.startTime.split(':').map(Number);
+      const startTimeInMinutes = startHour * 60 + startMinute;
+      
+      const dayIndex = daysOrder.indexOf(session.day);
+      const todayIndex = daysOrder.indexOf(today);
+      
+      if (dayIndex > todayIndex || (dayIndex === todayIndex && startTimeInMinutes > currentTime)) {
+        return {
+          day: session.day,
+          time: `${session.startTime} - ${session.endTime}`,
+          subject: session.subject
+        };
+      }
+    }
+
+    // اگر هیچ کلاسی برای آینده نزدیک نبود، اولین کلاس هفته آینده
     return {
-      day: nextSession.day,
-      time: `${nextSession.startTime} - ${nextSession.endTime}`,
-      subject: nextSession.subject
+      day: sortedSchedule[0]?.day || 'نامشخص',
+      time: sortedSchedule[0] ? `${sortedSchedule[0].startTime} - ${sortedSchedule[0].endTime}` : '--',
+      subject: sortedSchedule[0]?.subject || 'نامشخص'
     };
   };
 
@@ -224,7 +259,6 @@ const calculateTopStudents = (students: Student[], grades: Grade[]): Array<{
   };
 
   const handleMessageParents = () => {
-    // ارسال پیام به والدین
     alert('ویژگی ارسال پیام به والدین به زودی اضافه خواهد شد');
   };
 
