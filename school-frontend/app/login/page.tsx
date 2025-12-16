@@ -315,7 +315,7 @@ export default function LoginPage() {
                   <p className="truncate">
                     {localStorage.getItem('token')?.substring(0, 50)}...
                   </p>
-                  <p><strong>کاربر فعلی:</strong></p>
+                  <p><strong>کاربر فعلی:</strong></p> 
                   <p>{localStorage.getItem('user') || ''}</p>
                 </div>
               )}
