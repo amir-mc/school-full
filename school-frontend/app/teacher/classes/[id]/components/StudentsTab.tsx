@@ -26,8 +26,8 @@ interface StudentsTabProps {
 export default function StudentsTab({ classId, students }: StudentsTabProps) {
   const getGradeColor = (grade: number) => {
     if (grade >= 17) return 'bg-green-100 text-green-800';
-    if (grade >= 14) return 'bg-blue-100 text-blue-800';
-    if (grade >= 10) return 'bg-yellow-100 text-yellow-800';
+    if (grade >= 14) return 'bg-blue-100 text-yellow-800';
+    if (grade >= 10) return 'bg-yellow-100 text-red-800';
     return 'bg-red-100 text-red-800';
   };
 
