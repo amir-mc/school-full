@@ -34,7 +34,7 @@ export default function StudentsTab({ classId, students }: StudentsTabProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>لیست دانش‌آموزان کلاس</CardTitle>
+        <CardTitle>لیست دانش‌آموزان کلاس شما</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
