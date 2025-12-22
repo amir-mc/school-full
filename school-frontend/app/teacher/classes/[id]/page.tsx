@@ -71,7 +71,7 @@ export default function ClassDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
-
+ 
   useEffect(() => {
     if (classId) {
       fetchClassDetails();

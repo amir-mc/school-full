@@ -47,7 +47,7 @@ export default function StudentsTab({ classId, students }: StudentsTabProps) {
                 <th className="text-right py-3 px-4">تعداد نمرات</th>
                 <th className="text-right py-3 px-4">آخرین نمره</th>
                 <th className="text-right py-3 px-4">عملیات</th>
-              </tr>
+              </tr> 
             </thead>
             <tbody>
               {students.map((student, index) => {
