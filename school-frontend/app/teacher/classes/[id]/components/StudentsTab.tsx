@@ -77,10 +77,10 @@ export default function StudentsTab({ classId, students }: StudentsTabProps) {
                           </span>
                         </div>
                       ) : (
-                        <span className="text-gray-500">—</span>
+                        <span className="text-gray-500">—</span> 
                       )}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4"> 
                       <div className="flex gap-2">
                         <Link href={`/teacher/classes/${classId}/add-grade?studentId=${student.id}`}>
                           <Button size="sm">ثبت نمره</Button>
