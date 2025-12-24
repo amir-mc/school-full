@@ -74,17 +74,17 @@ export default function StudentsTab({ classId, students }: StudentsTabProps) {
                           </Badge>
                           <span className="text-sm text-gray-500">
                             ({lastGrade.subject})
-                          </span>
+                          </span> 
                         </div>
                       ) : (
                         <span className="text-gray-500">—</span> 
                       )}
                     </td>
-                    <td className="py-3 px-4"> 
-                      <div className="flex gap-2">
+                    <td className="py-3 px-4">  
+                      <div className="flex gap-2"> 
                         <Link href={`/teacher/classes/${classId}/add-grade?studentId=${student.id}`}>
                           <Button size="sm">ثبت نمره</Button>
-                        </Link>
+                        </Link> 
                         <Button variant="outline" size="sm">
                           <Mail className="h-4 w-4 ml-2" />
                           پیام
