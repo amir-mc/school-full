@@ -25,14 +25,14 @@ export default function LoginForm() {
 
       // ذخیره‌سازی توکن در localStorage یا cookie
       localStorage.setItem('token', data.access_token);
-
+  
       window.location.href = '/dashboard'; // مسیر بعد از ورود موفق
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setLoading(false);  
     }
-  };
+  };  
 
   return (
   <div className="max-w-md mx-auto p-6 bg-white rounded-xl shadow-md overflow-hidden space-y-6">
