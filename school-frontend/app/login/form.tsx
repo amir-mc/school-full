@@ -26,7 +26,7 @@ export default function LoginForm() {
       // ذخیره‌سازی توکن در localStorage یا cookie
       localStorage.setItem('token', data.access_token);
   
-      window.location.href = '/dashboard'; // مسیر بعد از ورود موفق
+      window.location.href = '/dashboard'; 
     } catch (err: any) {
       setError(err.message);
     } finally {
